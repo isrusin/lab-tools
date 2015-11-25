@@ -1,0 +1,3 @@
+26/11/15 00:26:40 [lists2list]
+Add verbose mode.
+Should print set sizes and additional info to stderr.
