@@ -3,3 +3,7 @@ Add verbose mode.
 Should print set sizes and additional info to stderr.
 FIXED 26/11/15 17:44:26
 
+26/11/15 17:46:45 [get_stat]
+Write get_stat util.
+Should return histogram like output for ranges from configuration file and values from specified column of input .tsv file.
+
