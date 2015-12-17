@@ -7,3 +7,7 @@ FIXED 26/11/15 17:44:26
 Write get_stat util.
 Should return histogram like output for ranges from configuration file and values from specified column of input .tsv file.
 
+17/12/15 13:29:37 [filter]
+Add reverse filter option.
+Should return entries that are not in the specified set(s).
+
