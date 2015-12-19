@@ -10,4 +10,4 @@ Should return histogram like output for ranges from configuration file and value
 17/12/15 13:29:37 [filter]
 Add reverse filter option.
 Should return entries that are not in the specified set(s).
-
+FIXED 19/12/15 23:28:03
