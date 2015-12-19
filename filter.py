@@ -26,39 +26,63 @@ def load_sets(file_list, isprs=False):
 	return tags, filter_tags
 
 if __name__ == "__main__":
-	parser = ap.ArgumentParser(prog="filter", usage="%(prog)s [-h] FILE " +
-	                           "[-t] [-a SET] [-s SET] [-p SET] [-o FILE]",
-	                           description="Filter .prs (default) or .tsv " +
-	                           "(-t option) file by set(s) of SIDs, sites " +
-	                           "or pairs.")
+	parser = ap.ArgumentParser(
+	        prog="filter", usage="%(prog)s [-h] FILE [-t] [-o FILE] " +
+	        "[-a SET] [-A SET] [-s SET] [-S SET] [-p SET] [-P SET]",
+	        description="Filter .prs (default) or .tsv (-t option) file " +
+	        "by set(s) of SIDs, sites or pairs."
+	        )
 	parser.add_argument("infile", metavar="FILE", type=ap.FileType('r'),
 	                    help="input .prs (default) or .tsv file")
 	parser.add_argument("-t", "--title", dest="title", action="store_true",
 	                    help="treat input file as .tsv (with title)")
-	parser.add_argument("-a", dest="sids", type=ap.FileType('r'), nargs="*",
-	                    metavar="SET", help="filter by the SET of sids.")
-	parser.add_argument("-s", dest="sites", type=ap.FileType('r'), nargs="*",
-	                    metavar="SET", help="filter by the SET of sites.")
-	parser.add_argument("-p", dest="pairs", type=ap.FileType('r'), nargs="*",
-	                    metavar="SET", help="filter by the SET of pairs.")
+	parser.add_argument(
+	        "-a", dest="sids", type=ap.FileType('r'), nargs="*",
+	        metavar="SET", help="filter by the SET of sids."
+	        )
+	parser.add_argument(
+	        "-A", dest="nosids", type=ap.FileType('r'), nargs="*",
+	        metavar="SET", help="filter by the reversed SET of sids."
+	        )
+	parser.add_argument(
+	        "-s", dest="sites", type=ap.FileType('r'), nargs="*",
+	        metavar="SET", help="filter by the SET of sites."
+	        )
+	parser.add_argument(
+	        "-S", dest="nosites", type=ap.FileType('r'), nargs="*",
+	        metavar="SET", help="filter by the reversed SET of sites."
+	        )
+	parser.add_argument(
+	        "-p", dest="pairs", type=ap.FileType('r'), nargs="*",
+	        metavar="SET", help="filter by the SET of pairs."
+	        )
+	parser.add_argument(
+	        "-P", dest="nopairs", type=ap.FileType('r'), nargs="*",
+	        metavar="SET", help="filter by the reversed SET of pairs."
+	        )
 	parser.add_argument("-o", "--output", dest="oufile", metavar="FILE",
 	                    type=ap.FileType('w'), default=sys.stdout,
 	                    help="output file, default is stdout")
 	args = parser.parse_args()
 	sids, filter_sids = load_sets(args.sids)
+	nosids, filter_nosids = load_sets(args.nosids)
 	sites, filter_sites = load_sets(args.sites)
+	nosites, filter_nosites = load_sets(args.nosites)
 	pairs, filter_pairs = load_sets(args.pairs, True)
-	with args.oufile as oufile:
-		with args.infile as infile:
-			if args.title:
-				oufile.write(infile.readline())
-			for line in infile:
-				sid, site = pair = tuple(line.strip().split('\t', 2)[:2])
-				if filter_sids and sid not in sids:
-					continue
-				if filter_sites and site not in sites:
-					continue
-				if filter_pairs and pair not in pairs:
-					continue
-				oufile.write(line)
+	nopairs, filter_nopairs = load_sets(args.nopairs, True)
+	with args.oufile as oufile, args.infile as infile:
+		if args.title:
+			oufile.write(infile.readline())
+		for line in infile:
+			sid, site = pair = tuple(line.strip().split('\t', 2)[:2])
+			if ((filter_sids and sid not in sids)
+			        or (filter_nosids and sid in nosids)):
+				continue
+			if ((filter_sites and site not in sites)
+			        or (filter_nosites and site in nosites)):
+				continue
+			if ((filter_pairs and pair not in pairs)
+			        or (filter_nopairs and pair in nopairs)):
+				continue
+			oufile.write(line)
 
