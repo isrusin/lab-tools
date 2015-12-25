@@ -75,14 +75,14 @@ if __name__ == "__main__":
 			oufile.write(infile.readline())
 		for line in infile:
 			sid, site = pair = tuple(line.strip().split('\t', 2)[:2])
-			if ((filter_sids and sid not in sids)
-			        or (filter_nosids and sid in nosids)):
+			if ((filter_sids and sid not in sids) or
+			        (filter_nosids and sid in nosids)):
 				continue
-			if ((filter_sites and site not in sites)
-			        or (filter_nosites and site in nosites)):
+			if ((filter_sites and site not in sites) or
+			        (filter_nosites and site in nosites)):
 				continue
-			if ((filter_pairs and pair not in pairs)
-			        or (filter_nopairs and pair in nopairs)):
+			if ((filter_pairs and pair not in pairs) or
+			        (filter_nopairs and pair in nopairs)):
 				continue
 			oufile.write(line)
 
