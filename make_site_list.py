@@ -16,16 +16,17 @@ if __name__ == "__main__":
 	parser = ap.ArgumentParser(
 	        description="Generate list of all sites of the given length."
 	        )
-	parser.add_argument("length", metavar="N", type=int,
-	                    choices=range(1, 9), help="length of sites"
-	                    )
 	parser.add_argument(
-	        "-o", dest="oustl", type=ap.FileType('w'), default=sys.stdout,
-	        metavar="FILE", help="output file (.stl extension is prefered)"
+	        "-o", dest="oustl", metavar="FILE", type=ap.FileType('w'),
+	        default=sys.stdout, help="output .stl file (default is stdout)"
 	        )
 	parser.add_argument(
-	        "-n", "-N", dest="with_n", action="store_true",
+	        "--with-n", dest="with_n", action="store_true",
 	        help="use 5-letter alphabet [A, C, G, T, N]"
+	        )
+	parser.add_argument(
+	        "length", metavar="LENGTH", type=int, choices=range(1, 11),
+	        help="length of sites, from 1 to 10, including both"
 	        )
 	args = parser.parse_args()
 	if args.with_n:
