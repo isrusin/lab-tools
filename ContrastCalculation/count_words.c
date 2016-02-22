@@ -164,6 +164,7 @@ void print_counts(FILE *cnt, int len, int32_t *counts){
 	int i = 1;
 	int32_t from = 1 << 2;
 	int32_t to = from << 1;
+	fprintf(cnt, "%d\n", len);
 	for(; i<=len; i++){
 		int32_t site;
 		char dest[i+1];
