@@ -15,9 +15,11 @@ dnucls = {
 
 def digitize(site):
 	sites = [1]
-	begin = 0
-	while site[begin] == 'N':
-		begin += 1
+	for begin in range(len(site)):
+		if site[begin] != 'N':
+			break
+	else:
+		return sites
 	end = len(site)
 	while site[end - 1] == 'N':
 		end -= 1
@@ -56,6 +58,8 @@ class MarkovSite(Site):
 		self.cpart = digitize(self.str_site[1:-1])
 	
 	def calc_expected(self, counts):
+		if self.eL == 1:
+			return counts.get_total(1) * len(self.dsite) / 4.0
 		div = counts.get_count(self.cpart)
 		if div == 0:
 			return float('NaN')
@@ -82,6 +86,8 @@ class PevznerSite(Site):
 			arr_site[i] = self.str_site[i]
 	
 	def calc_expected(self, counts):
+		if self.eL == 1:
+			return counts.get_total(1) * len(self.dsite) / 4.0
 		div = 1.0
 		for dsite in self.doubleN:
 			div *= counts.get_count(dsite)
@@ -130,6 +136,8 @@ class KarlinSite(Site):
 		_addN(0, arr_site, self.str_site, self.eL, self.oddN, self.evenN)
 	
 	def calc_expected(self, counts):
+		if self.eL == 1:
+			return counts.get_total(1) * len(self.dsite) / 4.0
 		div = 1.0
 		for dsite, dlen in self.evenN:
 			div *= counts.get_freq(dsite, dlen)

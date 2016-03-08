@@ -21,6 +21,7 @@ class Counts():
 					site += 1
 				totals.append(float(total))
 				site <<= 1
+		counts[1] = int(totals[1])
 		return length, counts, totals
 	
 	def __init__(self, incnt):
