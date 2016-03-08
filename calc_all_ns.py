@@ -12,22 +12,30 @@ if __name__ == "__main__":
 	        required=True, help="input file with ACv list (.acv)"
 	        )
 	parser.add_argument(
-	        "-d", dest="cntdir", metavar="DIR", required=True,
-	        help="folder with .cnt files"
+	        "-c", dest="cntpath", metavar="PATH", required=True,
+	        help=".cnt files path with %%s placeholder that will be " +
+	        "replaced with ACv from the input ACv list, only parent " +
+	        "folder could be specified, '/%%s.cnt' tag will be added " +
+	        "in the case"
 	        )
 	parser.add_argument(
 	        "-s", dest="instl", metavar="FILE.stl", type=ap.FileType('r'),
 	        required=True, help="input file with sites (.stl)"
 	        )
 	parser.add_argument(
-	        "-o", dest="oudir", metavar="DIR", required=True,
-	        help="output folder for .ns files"
+	        "-o", dest="oupath", metavar="PATH", required=True,
+	        help="output .ns files path with %%s placeholder or " +
+	        "output folder ('/%%s.ns' tag will be added)"
 	        )
 	args = parser.parse_args()
 	with args.inacv as inacv:
 		acvs = inacv.read().strip().split('\n')
-	cntpath = args.cntdir + "/%s.cnt"
-	oupath = args.oudir + "/%s.ns"
+	cntpath = args.cntpath
+	if "%s" not in cntpath:
+		cntpath += "/%s.cnt"
+	oupath = args.oupath
+	if "%s" not in oupath:
+		oupath += "/%s.ns"
 	sites = []
 	with args.instl as instl:
 		for line in instl:
