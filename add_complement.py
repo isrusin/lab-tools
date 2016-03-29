@@ -6,7 +6,7 @@ import sys
 compls = {
         'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C',
         'B': 'V', 'V': 'B', 'D': 'H', 'H': 'D', 'N': 'N',
-        'M': 'K', 'K': 'M', 'P': 'Y', 'Y': 'P', 'W': 'W', 'S': 'S'
+        'M': 'K', 'K': 'M', 'R': 'Y', 'Y': 'R', 'W': 'W', 'S': 'S'
         }
 
 def to_ds(site):
