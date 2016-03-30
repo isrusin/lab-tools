@@ -2,7 +2,7 @@
 
 import argparse as ap
 
-from ContrastCalculation.counts import Counts
+import ContrastCalculation.counts as cnt
 import ContrastCalculation.sites as st
 
 if __name__ == "__main__":
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 	        help="title tag of the output file"
 	        )
 	args = parser.parse_args()
-	counts = Counts(args.incnt)
+	counts = cnt.load_counts(args.incnt)
 	sites = st.load_sl(args.innsl)
 	with args.oucst as oucst:
 		oucst.write("Site\t{0}o\t{0}e\t{0}r\tL\n".format(args.tag))

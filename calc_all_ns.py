@@ -2,7 +2,7 @@
 
 import argparse as ap
 
-from ContrastCalculation.counts import Counts
+import ContrastCalculation.counts as cnt
 import ContrastCalculation.sites as st
 
 if __name__ == "__main__":
@@ -43,7 +43,7 @@ if __name__ == "__main__":
 			sites.append((st.MarkovSite(site), st.PevznerSite(site),
 			              st.KarlinSite(site)))
 	for acv in acvs:
-		counts = Counts(open(cntpath % acv))
+		counts = cnt.load_counts(open(cntpath % acv))
 		with open(oupath % acv, 'w') as ouns:
 			ouns.write("Site\tMo\tMe\tMr\tPo\tPe\tPr\tKo\tKe\tKr\tL\n")
 			for msite, psite, ksite in sites:
