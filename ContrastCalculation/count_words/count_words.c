@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <zlib.h>
 #include <stdint.h>
 
+int32_t * count_words(char *, int);
 int32_t initialize(gzFile, int);
 int32_t countup(gzFile, int32_t, int32_t, int32_t *);
 void countup_residuals(int32_t, int32_t, int32_t *);
@@ -20,25 +22,23 @@ int main(int argc, char **argv){
 		printf("bad word length, only [1..14] is allowed\n");
 		return 1;
 	}
-	gzFile fasta;
-	fasta = gzopen(argv[2], "rb");
-	if(fasta == NULL){
-		printf("fasta file was not found\n");
-		return 1;
-	}
+	int32_t *counts = count_words(argv[2], len);
 	FILE *cnt;
 	cnt = fopen(argv[3], "wb");
-	if(cnt == NULL){
-		printf("can't create output file\n");
-		return 1;
-	}
+	assert(cnt);
+	print_counts(cnt, len, counts);
+	free(counts);
+	fclose(cnt);
+}
+
+int32_t * count_words(char *filename, int len){
+	gzFile fasta;
+	fasta = gzopen(filename, "rb");
+	assert(fasta);
 	int32_t num = 1 << (len * 2 + 1);
 	int32_t *counts;
 	counts = (int32_t *)calloc(num, sizeof(int32_t));
-	if(counts == NULL){
-		printf("can't allocate memory for counts\n");
-		return 2;
-	}
+	assert(counts);
 	int32_t mask = (num >> 1) - 1;
 	while(1){
 		if(skip(fasta) == 0)
@@ -47,20 +47,8 @@ int main(int argc, char **argv){
 		countup_residuals(site, mask, counts);
 	}
 	countup_subsites(num-1, counts);
-	print_counts(cnt, len, counts);
-	free(counts);
-	if(!gzeof(fasta)){
-		printf("fasta file reading error\n");
-		return 3;
-	}
-	if(gzclose(fasta) < 0){
-		printf("fasta file closing error\n");
-		return 3;
-	}
-	if(fclose(cnt) < 0){
-		printf("output file closing error\n");
-		return 3;
-	}
+	gzclose(fasta);
+	return counts;
 }
 
 int translate(char nucl){
