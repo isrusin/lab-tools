@@ -4,6 +4,8 @@
 #include <zlib.h>
 #include <stdint.h>
 
+int translate(char);
+int skip(gzFile);
 int32_t * count_words(char *, int);
 int32_t initialize(gzFile, int);
 int32_t countup(gzFile, int32_t, int32_t, int32_t *);
