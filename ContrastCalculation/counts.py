@@ -1,3 +1,4 @@
+import os
 import ctypes as ct
 
 class Counts():
@@ -42,7 +43,8 @@ def load_counts(incnt):
 	return Counts(length, counts, totals)
 
 def calculate_counts(fasta_path, length):
-	cw_lib = ct.CDLL("count_words/count_words.so")
+	module_path = os.path.dirname(__file__) or "."
+	cw_lib = ct.CDLL(module_path + "/count_words/count_words.so")
 	count_words = cw_lib.count_words
 	num = 1 << (length * 2 + 1)
 	count_words.restype = ct.POINTER(ct.c_int32 * num)
