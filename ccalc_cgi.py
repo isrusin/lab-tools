@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+import cgitb
+cgitb.enable()
 import cgi
 import tempfile as tmp
 import ContrastCalculation.counts as cnt
@@ -9,22 +11,22 @@ MAX_SIZE = 1 #in MiB
 TEMP_DIR = "../ccalc/tmp"
 
 def return_message(message):
-	print "Content-Type: text/html"
+	print "Content-Type: text/html\n"
 	print "<h1>Error!</h1>"
 	print message
 	exit()
 
 def load_in_temp(form, name, tag, suffix):
-	if name not in form:
+	if not form[name].filename:
 		return_message("%s file is required." % tag)
 	infile = form[name].file
-	with infile:
-		data = infile.read(MAX_SIZE * (1024 ** 2))
-		if infile.readline() != "":
-			return_message(
-			        "%s file is too big, max size is %d MiB." %
-			        (tag, MAX_SIZE)
-			)
+	data = infile.read(MAX_SIZE * (1024 ** 2))
+	if infile.readline() != "":
+		return_message(
+		        "%s file is too big, max size is %d MiB." %
+		        (tag, MAX_SIZE)
+		)
+	infile.close()
 	tmpfile = tmp.NamedTemporaryFile(
 	        suffix=suffix, dir=TEMP_DIR, delete=False
 	)
@@ -41,18 +43,18 @@ k_flag = form.getvalue("karlin", "no") == "yes"
 if not (m_flag or p_flag or k_flag):
 	return_message("At least one method should be selected.")
 
-ouline = "{Site}\t{Fo}"
+ouline = "{Site}\t{Fo:.0f}"
 title = "Site\tObserved number"
 if m_flag:
-	ouline += "\t{Me}\t{Mr}"
+	ouline += "\t{Me:.2f}\t{Mr:.3f}"
 	title += "\tMmax expected\tMmax ratio"
 if p_flag:
-	ouline += "\t{Pe}\t{Pr}"
+	ouline += "\t{Pe:.2f}\t{Pr:.3f}"
 	title += "\tPevzner's expected\tPevzner's ratio"
 if k_flag:
-	ouline += "\t{Ke}\t{Kr}"
+	ouline += "\t{Ke:.2f}\t{Kr:.3f}"
 	title += "\tKarlin's expected\tKarlin's ratio"
-ouline += "\t{L}\n"
+ouline += "\t{L:.0f}\n"
 title += "\tSequence length\n"
 
 stl_path = load_in_temp(form, "sites", "Site list", ".stl")
@@ -86,15 +88,15 @@ with outmp:
 		if m_flag:
 			me = st.MarkovSite(site).calc_expected(counts)
 			vals["Me"] = me
-			vals["Mr"] = vals["Fo"] / me
+			vals["Mr"] = (vals["Fo"] / me) if me else float("nan")
 		if p_flag:
 			pe = st.PevznerSite(site).calc_expected(counts)
 			vals["Pe"] = pe
-			vals["Pr"] = vals["Fo"] / pe
+			vals["Pr"] = (vals["Fo"] / pe) if pe else float("nan")
 		if k_flag:
 			ke = st.KarlinSite(site).calc_expected(counts)
 			vals["Ke"] = ke
-			vals["Kr"] = vals["Fo"] / ke
+			vals["Kr"] = (vals["Fo"] / ke) if ke else float("nan")
 		outmp.write(ouline.format(**vals))
 
 oupath = outmp.name
@@ -109,5 +111,5 @@ if skipped:
 	skipped_html += "<p>\n" + "<br>\n".join(skipped) + "</p>\n"
 
 ouhtml = ouhtml.replace("@skipped", skipped_html)
-print "Content-Type: text/html"
+print "Content-Type: text/html\n"
 print ouhtml
