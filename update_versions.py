@@ -15,7 +15,7 @@ if __name__ == "__main__":
 	        )
 	parser.add_argument(
 	        "-c", dest="column", metavar="N", type=int, default=0,
-	        help="index of AC(v) column in the input file"
+	        help="index of AC(v) column in the input file (default 0)"
 	        )
 	parser.add_argument(
 	        "-s", dest="source", metavar="LIST.acv", type=ap.FileType('r'),
