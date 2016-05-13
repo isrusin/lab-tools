@@ -5,19 +5,19 @@ import sys
 
 if __name__ == "__main__":
 	parser = ap.ArgumentParser(
-	        description=""
+	        description="Join files with contrasts into single .tsv file."
 	        )
 	parser.add_argument(
 	        "-a", dest="inacv", metavar="IN.acv", type=ap.FileType('r'),
-	        required=True, help="input file with ACv list (.acv)"
+	        required=True, help="input file with ACv (any ID) list (.acv)"
 	        )
 	parser.add_argument(
 	        "-s", dest="instl", metavar="IN.stl", type=ap.FileType('r'),
 	        required=True, help="input file with list of sites (.stl)"
 	        )
 	parser.add_argument(
-	        "-d", dest="nsdir", metavar="DIR", required=True,
-	        help="folder with .ns files"
+	        "-d", dest="nspath", metavar="PATH", required=True,
+	        help="path to .ns files, use %s placeholder for ACv (ID)."
 	        )
 	parser.add_argument(
 	        "-o", dest="outsv", metavar="OUT.tsv", type=ap.FileType('w'),
@@ -29,7 +29,9 @@ if __name__ == "__main__":
 	with args.instl as instl:
 		sites = set(instl.read().strip().split('\n'))
 	acvs = sorted(acvs)
-	nspath = args.nsdir + "/%s.ns"
+	nspath = args.nspath
+	if "%" not in nspath:
+		nspath += "/%s.ns"
 	with args.outsv as outsv:
 		outsv.write(
 		        "ACv\tSite\tMo\tMe\tMr\tPo\tPe\tPr\tKo\tKe\tKr\tLength\n"
