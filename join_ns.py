@@ -33,12 +33,13 @@ if __name__ == "__main__":
 	if "%" not in nspath:
 		nspath += "/%s.ns"
 	with args.outsv as outsv:
-		outsv.write(
-		        "ACv\tSite\tMo\tMe\tMr\tPo\tPe\tPr\tKo\tKe\tKr\tLength\n"
-		        )
+		is_first = True
 		for acv in acvs:
 			with open(nspath % acv) as intab:
-				intab.readline()
+				title = intab.readline()
+				if is_first:
+					is_first = False
+					outsv.write("ID\t" + title)
 				for line in intab:
 					site, etc = line.split('\t', 1)
 					if site in sites:
