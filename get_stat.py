@@ -11,12 +11,6 @@ compls = {
         "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
         }
 
-def to_ds(site):
-    rsite = ""
-    for nucl in site[::-1]:
-        rsite += compls.get(nucl, "?")
-    return (min(site, rsite), max(site, rsite))
-
 NAN = 0
 UNR = 1
 ZERO = 2
@@ -25,6 +19,60 @@ LESS = 4
 ONE = 5
 MORE = 6
 OVER = 7
+
+title_str = "\n\n\t{}:\n"
+stats_str = """
+      |    All   |Palindrome|Asymmetric| Coinside |  Differ  |Incomplete
+------+----------+----------+----------+----------+----------+----------
+Total | {all_tot}| {pal_tot}| {npl_tot}| {sam_tot}| {dif_tot}| {inc_tot}
+------+----------+----------+----------+----------+----------+----------
+NaN   | {all_nan}| {pal_nan}| {npl_nan}| {sam_nan}| {dif_nan}| {inc_nan}
+Low   | {all_unr}| {pal_unr}| {npl_unr}| {sam_unr}| {dif_unr}| {inc_unr}
+Good  | {all_rel}| {pal_rel}| {npl_rel}| {sam_rel}| {dif_rel}| {inc_rel}
+------+----------+----------+----------+----------+----------+----------
+<1    | {all_les}| {pal_les}| {npl_les}| {sam_les}| {dif_les}| {inc_les}
+ 1    | {all_one}| {pal_one}| {npl_one}| {sam_one}| {dif_one}| {inc_one}
+>1    | {all_mor}| {pal_mor}| {npl_mor}| {sam_mor}| {dif_mor}| {inc_mor}
+------+----------+----------+----------+----------+----------+----------
+0     | {all_zer}| {pal_zer}| {npl_zer}| {sam_zer}| {dif_zer}| {inc_zer}
+Under | {all_und}| {pal_und}| {npl_und}| {sam_und}| {dif_und}| {inc_und}
+Norm  | {all_nor}| {pal_nor}| {npl_nor}| {sam_nor}| {dif_nor}| {inc_nor}
+Over  | {all_ove}| {pal_ove}| {npl_ove}| {sam_ove}| {dif_ove}| {inc_ove}
+"""
+stats_val_str = "{count:>4s} {percent:>4.1f}"
+#value_md = "{} ({:.1f}%)"
+#blank_md = blank_raw.strip("\n").replace("+", "|", 6).replace("+", "-")
+#blank_md = "\n|" + blank_md.replace("|", " | ").replace("-" * 72, "")
+#blank_md = blank_md.replace("\n\n", "\n") + "\n\n"
+
+groups_str = """
+      |  NaN  |  Low  |  Zero | Under |  Less |  One  |  More |  Over |
+------+-------+-------+-------+-------+-------+-------+-------+-------+
+Total |{na_to}|{lo_to}|{ze_to}|{un_to}|{le_to}|{on_to}|{mo_to}|{ov_to}|
+------+-------+-------+-------+-------+-------+-------+-------+-------'
+Over  |{na_ov}|{lo_ov}|{ze_ov}|{un_ov}|{le_ov}|{on_ov}|{mo_ov}|
+------+-------+-------+-------+-------+-------+-------+-------'
+More  |{na_mo}|{lo_mo}|{ze_mo}|{un_mo}|{le_mo}|{on_mo}|
+------+-------+-------+-------+-------+-------+-------'
+One   |{na_on}|{lo_on}|{ze_on}|{un_on}|{le_on}|
+------+-------+-------+-------+-------+-------'
+Less  |{na_le}|{lo_le}|{ze_le}|{un_le}|
+------+-------+-------+-------+-------'
+Under |{na_un}|{lo_un}|{ze_un}|
+------+-------+-------+-------'
+Zero  |{na_ze}|{lo_ze}|
+------+-------+-------'
+Low   |{na_lo}|
+------+-------'
+"""
+groups_num_str = "{count:>6s} "
+groups_prc_str = "{percent:>5.1f}% "
+
+def to_ds(site):
+    rsite = ""
+    for nucl in site[::-1]:
+        rsite += compls.get(nucl, "?")
+    return (min(site, rsite), max(site, rsite))
 
 def classify(obs, exp):
     group = ONE
@@ -48,55 +96,41 @@ def classify(obs, exp):
                 group = MORE
     return group
 
-blank_raw = """
-      |    All   |Palindrome|Asymmetric| Coinside |  Differ  |Incomplete
-------+----------+----------+----------+----------+----------+----------
-Total | {all_tot}| {pal_tot}| {npl_tot}| {sam_tot}| {dif_tot}| {inc_tot}
-------+----------+----------+----------+----------+----------+----------
-NaN   | {all_nan}| {pal_nan}| {npl_nan}| {sam_nan}| {dif_nan}| {inc_nan}
-Low   | {all_unr}| {pal_unr}| {npl_unr}| {sam_unr}| {dif_unr}| {inc_unr}
-Good  | {all_rel}| {pal_rel}| {npl_rel}| {sam_rel}| {dif_rel}| {inc_rel}
-------+----------+----------+----------+----------+----------+----------
-<1    | {all_les}| {pal_les}| {npl_les}| {sam_les}| {dif_les}| {inc_les}
- 1    | {all_one}| {pal_one}| {npl_one}| {sam_one}| {dif_one}| {inc_one}
->1    | {all_mor}| {pal_mor}| {npl_mor}| {sam_mor}| {dif_mor}| {inc_mor}
-------+----------+----------+----------+----------+----------+----------
-0     | {all_zer}| {pal_zer}| {npl_zer}| {sam_zer}| {dif_zer}| {inc_zer}
-Under | {all_und}| {pal_und}| {npl_und}| {sam_und}| {dif_und}| {inc_und}
-Norm  | {all_nor}| {pal_nor}| {npl_nor}| {sam_nor}| {dif_nor}| {inc_nor}
-Over  | {all_ove}| {pal_ove}| {npl_ove}| {sam_ove}| {dif_ove}| {inc_ove}
-"""
-blank_md = blank_raw.strip("\n").replace("+", "|", 6).replace("+", "-")
-blank_md = "\n|" + blank_md.replace("|", " | ").replace("-" * 72, "")
-blank_md = blank_md.replace("\n\n", "\n") + "\n\n"
-
-value_raw = "{0:>4} {1:>4.1f}"
-value_md = "{} ({:.1f}%)"
-def count_to_str(count, total, md):
-    percent = (100.0 * count / total) if total else 0
-    if md:
-        return value_md.format(count, percent)
-    tag = ""
+def format_count(count, extra_space):
+    count_str = "{0:.%df}{1:s}"
+    rank = ""
     if count >= 1000000:
-        tag = "M"
+        rank = "M"
         count /= 1000000.0
     elif count >= 1000:
-        tag = "k"
+        rank = "k"
         count /= 1000.0
-    count_str_blank = "{:.0f}{}"
-    if count < 10.0 and tag:
-        count_str_blank = "{:.1f}{}"
-    count_str = count_str_blank.format(count, tag)
-    return value_raw.format(count_str, percent)
+    precision = 0
+    if rank:
+        precision = max(0, 2 - len(str(count).split(".")[0]) + extra_space)
+    count_str = count_str % precision
+    return count_str.format(count, rank or " ")
 
-def calc_stat(stat_list, tag, md, joint_groups=None):
+def get_value_str(count, total, value_str, extra_space):
+    percent = (100.0 * count / total) if total else 0
+    if extra_space is None:
+        count_str = "{:d}".format(count)
+    else:
+        count_str = format_count(count, extra_space)
+    return value_str.format(count=count_str, percent=percent)
+
+def calc_stat(stat_list, tag, value_str, extra_space, joint_groups=None):
+    _get_value_str = lambda count, total: get_value_str(
+            count, total, value_str, extra_space
+            )
     stat = dict()
     total = sum(stat_list)
-    bad = sum(stat_list[:ZERO])
-    under = stat_list[ZERO] + stat_list[UNDER]
-    more = stat_list[MORE] + stat_list[OVER]
-    norm = sum(stat_list[LESS:OVER])
-    less = sum(stat_list[ZERO:ONE])
+    nan, unr, zero, under, less, one, more, over = stat_list
+    bad = nan + unr
+    norm = less + one + more
+    under += zero
+    less += under
+    more += over
     if joint_groups:
         total -= sum(joint_groups.values())
         for (g1, g2), count in joint_groups.items():
@@ -112,16 +146,13 @@ def calc_stat(stat_list, tag, md, joint_groups=None):
         norm -= joint_groups[(ONE, MORE)]
     stat[tag+"_total"] = total
     good = total - bad
-    stat[tag+"_nan"] = count_to_str(stat_list[NAN], total, md)
-    stat[tag+"_unr"] = count_to_str(stat_list[UNR], total, md)
-    stat[tag+"_rel"] = count_to_str(good, total, md)
-    stat[tag+"_zer"] = count_to_str(stat_list[ZERO], good, md)
-    stat[tag+"_und"] = count_to_str(under, good, md)
-    stat[tag+"_les"] = count_to_str(less, good, md)
-    stat[tag+"_one"] = count_to_str(stat_list[ONE], good, md)
-    stat[tag+"_mor"] = count_to_str(more, good, md)
-    stat[tag+"_ove"] = count_to_str(stat_list[OVER], good, md)
-    stat[tag+"_nor"] = count_to_str(norm, good, md)
+    for abr, count in zip(["nan", "unr", "rel"], [nan, unr, good]):
+        stat["%s_%s" % (tag, abr)] = _get_value_str(count, total)
+    for abr, count in zip(
+            ["zer", "und", "les", "one", "mor", "ove", "nor"],
+            [zero, under, less, one, more, over, norm]
+            ):
+        stat["%s_%s" % (tag, abr)] = _get_value_str(count, good)
     return stat
 
 if __name__ == "__main__":
@@ -187,24 +218,36 @@ if __name__ == "__main__":
             )
 #   parser.add_argument("--no-id")
     args = parser.parse_args()
-    
+    # cutoff
     EXP_CUTOFF = args.exp_cutoff
     ZERO_CUTOFF = args.zero_cutoff
     UNDER_CUTOFF = args.under_cutoff
     OVER_CUTOFF = args.over_cutoff
-    
+    # indices
     site_index = args.site_index
     id_index = args.id_index
     exp_index = args.exp_index
     obs_index = args.obs_index
     if obs_index is None:
         obs_index = exp_index - 1
-    
+    # format
+    out_format = args.format
+    if not out_format:
+        out_name = args.out.name
+        if out_name.endswith(".md"):
+            out_format = "md"
+        elif out_name.endswith(".html"):
+            out_format = "html"
+        else:
+            out_format = "raw"
+    md = out_format != "raw"
+    fill = None if md else 0
+    # collect stats
     waits = dict()
-    stats_pal = [0] * 8
-    stats_same = [0] * 8
-    stats_diff = [0] * 8
-    groups_diff = Counter()
+    p_stat = [0] * 8
+    s_stat = [0] * 8
+    d_stat = [0] * 8
+    d_groups = Counter()
     with args.intsv as intsv:
         intsv.readline()
         for line in intsv:
@@ -220,59 +263,91 @@ if __name__ == "__main__":
                 if pr in waits:
                     cgroup = waits.pop(pr)
                     if cgroup == group:
-                        stats_same[group] += 2
+                        s_stat[group] += 2
                     else:
-                        stats_diff[group] += 1
-                        stats_diff[cgroup] += 1
-                        groups_diff[tuple(sorted([group, cgroup]))] += 1
+                        d_stat[group] += 1
+                        d_stat[cgroup] += 1
+                        d_groups[tuple(sorted([group, cgroup]))] += 1
                 else:
                     waits[pr] = group
             else:
-                stats_pal[group] += 1
-    
-    stats_inc = [0] * 8
+                p_stat[group] += 1
+    i_stat = [0] * 8
     for group in waits.values():
-        stats_inc[group] += 1
-    
-    out_format = args.format
-    if not out_format:
-        out_name = args.out.name
-        if out_name.endswith(".md"):
-            out_format = "md"
-        elif out_name.endswith(".html"):
-            out_format = "html"
-        else:
-            out_format = "raw"
-    md = out_format != "raw"
-    stats_npl = list(map(sum, zip(stats_same, stats_diff, stats_inc)))
-    stats_all = list(map(sum, zip(stats_pal, stats_npl)))
-    stat_glob = dict()
-    stat_glob.update(calc_stat(stats_all, "all", md))
-    stat_glob.update(calc_stat(stats_pal, "pal", md))
-    stat_glob.update(calc_stat(stats_npl, "npl", md))
-    stat_glob.update(calc_stat(stats_same, "sam", md))
-    stat_glob.update(calc_stat(stats_diff, "dif", md))
-    stat_glob.update(calc_stat(stats_inc, "inc", md))
-    total = stat_glob["all_total"]
-    for tag in ["all", "pal", "npl", "sam", "dif", "inc"]:
-        total_str = count_to_str(stat_glob[tag + "_total"], total, md)
-        stat_glob[tag + "_tot"] = total_str
-    blank = blank_md if md else blank_raw
-    oustr = blank.format(**stat_glob)
-    
-    stats_same = [val // 2 for val in stats_same]
-    stats_npl = list(map(sum, zip(stats_same, stats_diff, stats_inc)))
-    stats_all = list(map(sum, zip(stats_pal, stats_npl)))
-    stat_glob.update(calc_stat(stats_all, "all", md, groups_diff))
-    stat_glob.update(calc_stat(stats_npl, "npl", md, groups_diff))
-    stat_glob.update(calc_stat(stats_same, "sam", md))
-    stat_glob.update(calc_stat(stats_diff, "dif", md, groups_diff))
-    total = stat_glob["all_total"]
-    for tag in ["all", "pal", "npl", "sam", "dif", "inc"]:
-        total_str = count_to_str(stat_glob[tag + "_total"], total, md)
-        stat_glob[tag + "_tot"] = total_str
-    oustr += blank.format(**stat_glob)
+        i_stat[group] += 1
+    # calculate stats
+    #    single-stranded sites
+    n_stat = list(map(sum, zip(s_stat, d_stat, i_stat)))
+    a_stat = list(map(sum, zip(p_stat, n_stat)))
+    stats_dct = dict()
+    for abr, stat in zip(
+            ["all", "pal", "npl", "sam", "dif", "inc"],
+            [a_stat, p_stat, n_stat, s_stat, d_stat, i_stat]
+            ):
+        stats_dct.update(calc_stat(stat, abr, stats_val_str, fill))
+    total = stats_dct["all_total"]
+    for abr in ["all", "pal", "npl", "sam", "dif", "inc"]:
+        count = stats_dct["%s_total" % abr]
+        t_str = get_value_str(count, total, stats_val_str, fill)
+        stats_dct["%s_tot" % abr] = t_str
+    oustr = title_str.format(
+            "Single-stranded site representation statistics"
+            )
+    oustr += stats_str.format(**stats_dct)
+    #    double-stranded sites
+    s_stat = [val // 2 for val in s_stat]
+    stats_dct.update(calc_stat(stat, abr, stats_val_str, fill))
+    n_stat = list(map(sum, zip(s_stat, d_stat, i_stat)))
+    a_stat = list(map(sum, zip(p_stat, n_stat)))
+    for abr, stat in zip(["all", "npl", "dif"], [a_stat, n_stat, d_stat]):
+        stats_dct.update(
+                calc_stat(stat, abr, stats_val_str, fill, d_groups)
+                )
+    total = stats_dct["all_total"]
+    for abr in ["all", "pal", "npl", "sam", "dif", "inc"]:
+        count = stats_dct["%s_total" % abr]
+        t_str = get_value_str(count, total, stats_val_str, fill)
+        stats_dct["%s_tot" % abr] = t_str
+    oustr += title_str.format(
+            "Double-stranded site representation statistics"
+            )
+    oustr += stats_str.format(**stats_dct)
+    #    joint groups for assymetric sites, counts
+    if fill is not None:
+        fill += 1
+    groups_dct = dict()
+    total = sum(d_groups.values())
+    group_abrs = ["na", "lo", "ze", "un", "le", "on", "mo", "ov"]
+    for g1 in range(len(group_abrs)):
+        for g2 in range(g1 + 1, len(group_abrs)):
+            if (g1, g2) not in d_groups:
+                d_groups[(g1, g2)] = 0
+    groups_totals = Counter()
+    for (g1, g2), count in d_groups.items():
+        groups_totals[g1] += count
+        groups_totals[g2] += count
+        abr = "%s_%s" % (group_abrs[g1], group_abrs[g2])
+        groups_dct[abr] = get_value_str(count, total, groups_num_str, fill)
+    for g, count in groups_totals.items():
+        abr = "%s_to" % group_abrs[g]
+        groups_dct[abr] = get_value_str(count, total, groups_num_str, fill)
+    oustr += title_str.format(
+            "Joint groups statistics for assymetric sites, counts"
+            )
+    oustr += groups_str.format(**groups_dct)
+    #    joint groups for assymetric sites, percents
+    for (g1, g2), count in d_groups.items():
+        abr = "%s_%s" % (group_abrs[g1], group_abrs[g2])
+        groups_dct[abr] = get_value_str(count, total, groups_prc_str, fill)
+    for g, count in groups_totals.items():
+        abr = "%s_to" % group_abrs[g]
+        groups_dct[abr] = get_value_str(count, total, groups_prc_str, fill)
+    oustr += title_str.format(
+            "Joint groups statistics for assymetric sites, percents"
+            )
+    oustr += groups_str.format(**groups_dct)
     if not md:
-        oustr = oustr.replace("100.0", " 100").replace("0  0.0", "--    ")
+        oustr = oustr.replace("100.0", " 100")
+        oustr = oustr.replace("0   0.0", " --    ")
     with args.out as out:
         out.write(oustr + "\n")
