@@ -296,7 +296,7 @@ if __name__ == "__main__":
     oustr += stats_str.format(**stats_dct)
     #    double-stranded sites
     s_stat = [val // 2 for val in s_stat]
-    stats_dct.update(calc_stat(stat, abr, stats_val_str, fill))
+    stats_dct.update(calc_stat(s_stat, "sam", stats_val_str, fill))
     n_stat = list(map(sum, zip(s_stat, d_stat, i_stat)))
     a_stat = list(map(sum, zip(p_stat, n_stat)))
     for abr, stat in zip(["all", "npl", "dif"], [a_stat, n_stat, d_stat]):
