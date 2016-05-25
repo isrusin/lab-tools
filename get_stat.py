@@ -1,9 +1,11 @@
 #! /usr/bin/python
 
 import argparse as ap
-import math
-import sys
 from collections import Counter
+import markdown
+import math
+from markdown.extensions.tables import TableExtension
+import sys
 
 compls = {
         "A": "T", "T": "A", "C": "G", "G": "C",
@@ -40,10 +42,6 @@ Norm  | {all_nor}| {pal_nor}| {npl_nor}| {sam_nor}| {dif_nor}| {inc_nor}
 Over  | {all_ove}| {pal_ove}| {npl_ove}| {sam_ove}| {dif_ove}| {inc_ove}
 """
 stats_val_str = "{count:>4s} {percent:>4.1f}"
-#value_md = "{} ({:.1f}%)"
-#blank_md = blank_raw.strip("\n").replace("+", "|", 6).replace("+", "-")
-#blank_md = "\n|" + blank_md.replace("|", " | ").replace("-" * 72, "")
-#blank_md = blank_md.replace("\n\n", "\n") + "\n\n"
 
 groups_str = """
       |  NaN  |  Low  |  Zero | Under |  Less |  One  |  More |  Over |
@@ -67,6 +65,50 @@ Low   |{na_lo}|
 """
 groups_num_str = "{count:>6s} "
 groups_prc_str = "{percent:>5.1f}% "
+
+html_seed = """
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>get_stat output</title>
+    <style type="text/css">
+      table {
+        border-collapse: collapse;
+      }
+      td, th {
+        padding: 1mm 3mm 1mm 3mm;
+        border: 1px solid black;
+      }
+      th {
+        background: #ccffff;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+@stat
+  </body>
+</html>
+"""
+
+def raw_table_to_markdown(table):
+    lines = table.strip("\n").split("\n")
+    tcells = [c.strip() for c in lines.pop(0).strip("\n|").split("|")]
+    if not tcells[0]:
+        tcells[0] = "  "
+    cols_num = len(tcells)
+    table_md = "| %s |\n" % " | ".join(tcells)
+    table_md += "|:%s:|\n" % ":|-".join("-" * len(c) for c in tcells)
+    table_md = table_md.replace(":|-", "-|-", 1)
+    for line in lines:
+        if "|" in line:
+            cells = [c.strip() for c in line.strip("\n|").split("|")]
+            appendix = [" "] * (cols_num - len(cells))
+            cells.extend(appendix)
+            cells[0] = "**%s**" % cells[0]
+            table_md += "| %s |\n" % " | ".join(cells)
+    table_md += "\n"
+    return table_md
 
 def to_ds(site):
     rsite = ""
@@ -175,6 +217,10 @@ if __name__ == "__main__":
             'md' - markdown (GitHub dialect); 'html' - HTML,
             through markdown"""
             )
+    io_group.add_argument(
+            "--force-short-counts", dest="shorten", action="store_true",
+            help="use short number format even in markdown and html"
+            )
     cutoff_group = parser.add_argument_group("cutoff arguments")
     cutoff_group.add_argument(
             "--exp-cutoff", metavar="F", type=float, default=15.0,
@@ -231,6 +277,7 @@ if __name__ == "__main__":
     if obs_index is None:
         obs_index = exp_index - 1
     # format
+    fill = 0
     out_format = args.format
     if not out_format:
         out_name = args.out.name
@@ -241,7 +288,15 @@ if __name__ == "__main__":
         else:
             out_format = "raw"
     md = out_format != "raw"
-    fill = None if md else 0
+    if md:
+        if not args.shorten:
+            fill = None
+        title_str = "\n\n##{}##\n\n"
+        stats_str = raw_table_to_markdown(stats_str)
+        stats_val_str = "{count} ({percent:.1f}%)"
+        groups_str = raw_table_to_markdown(groups_str)
+        groups_num_str = "{count}"
+        groups_prc_str = "{percent:.1f}%"
     # collect stats
     waits = dict()
     p_stat = [0] * 8
@@ -350,4 +405,8 @@ if __name__ == "__main__":
         oustr = oustr.replace("100.0", " 100")
         oustr = oustr.replace("0   0.0", " --    ")
     with args.out as out:
-        out.write(oustr + "\n")
+        if out_format == "html":
+            html = markdown.markdown(oustr, extensions=[TableExtension()])
+            oustr = html_seed.replace("@stat", html)
+        out.write(oustr)
+
