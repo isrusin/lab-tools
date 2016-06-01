@@ -139,7 +139,7 @@ def classify(obs, exp):
     return group
 
 def format_count(count, extra_space):
-    count_str = "{0:.%df}{1:s}"
+    count_str = "{0:.%df}"
     rank = ""
     if count >= 1000000:
         rank = "M"
@@ -151,7 +151,10 @@ def format_count(count, extra_space):
     if rank:
         precision = max(0, 2 - len(str(count).split(".")[0]) + extra_space)
     count_str = count_str % precision
-    return count_str.format(count, rank or " ")
+    answer = count_str.format(count)
+    if len(answer) > 3 + extra_space:
+        answer = answer[:-1].strip(".")
+    return answer + (rank or " ")
 
 def get_value_str(count, total, value_str, extra_space):
     percent = (100.0 * count / total) if total else 0
