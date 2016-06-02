@@ -1,16 +1,18 @@
 #! /usr/bin/python
 
-import sys
 import argparse as ap
+import sys
 
-nucls = {"N":["A","C","G","T"],
-        "A":["A"], "B":["C","G","T"],
-        "C":["C"], "D":["A","G","T"],
-        "G":["G"], "H":["A","C","T"],
-        "T":["T"], "V":["A","C","G"],
-        "M":["A","C"], "K":["G","T"],
-        "R":["A","G"], "Y":["C","T"],
-        "W":["A","T"], "S":["C","G"]}
+nucls = {
+        "N": ["A", "C", "G", "T"],
+        "A": ["A"], "B": ["C", "G", "T"],
+        "C": ["C"], "D": ["A", "G", "T"],
+        "G": ["G"], "H": ["A", "C", "T"],
+        "T": ["T"], "V": ["A", "C", "G"],
+        "M": ["A", "C"], "K": ["G", "T"],
+        "R": ["A", "G"], "Y": ["C", "T"],
+        "W": ["A", "T"], "S": ["C", "G"]
+        }
 
 def regenerate(dsite):
     regenerated = [""]
@@ -22,10 +24,11 @@ def regenerate(dsite):
         regenerated = elongated
     return regenerated
 
+
 if __name__ == "__main__":
     parser = ap.ArgumentParser(
-            description="Make list of non-degenerate variants of " +
-            "degenerate sites."
+            description="""Make list of non-degenerate variants of a
+            degenerate sites."""
             )
     parser.add_argument(
             "-i", metavar="FILE", dest="instl", type=ap.FileType("r"),
@@ -49,7 +52,7 @@ if __name__ == "__main__":
         sites.update(dsites)
     with args.oustl as oustl:
         try:
-            oustl.write("\n".join(sorted(sites))+"\n")
+            oustl.write("\n".join(sorted(sites)) + "\n")
         except IOError:
             sys.stderr.write("Partial output!\n")
 
