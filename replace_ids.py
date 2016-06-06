@@ -28,12 +28,19 @@ if __name__ == "__main__":
             )
     parser.add_argument(
             "-d", "--delimiter", dest="delimiter", metavar="STRING",
-            nargs="?", const=",", help="""switch to 'delimited' mode and
-            set up the delimiter, default is coma (-d without value)"""
+            nargs="?", default=",", help="""set up the delimiter for
+            multiple-entry values, default is coma; -d with no value means
+            not to split values"""
             )
     parser.add_argument(
             "-k", "--keep-order", dest="keep", action="store_true",
             help="keep order of IDs, only with -d"
+            )
+    parser.add_argument(
+            "-m", "--missed", dest="missed", metavar="STRING", nargs="?",
+            default="", help="""a string to replace IDs missed in source
+            with; -m without value forces to keep missed IDs in place;
+            default behaviour (without -m) is to remove all missed IDs"""
             )
     args = parser.parse_args()
     idict = dict()
@@ -44,19 +51,21 @@ if __name__ == "__main__":
     index = args.index
     keep = args.keep
     delimiter = args.delimiter
+    missed = args.missed
+    if missed is None:
+        replace = lambda x: idict.get(x, x)
+    else:
+        replace = lambda x: idict.get(x, missed)
     with args.infile as infile, args.oufile as oufile:
         if args.title:
             oufile.write(infile.readline())
         for line in infile:
             vals = line.strip().split("\t")
             val = vals[index]
-            if delimiter:
-                replaced = map(lambda x: idict.get(x, "?"),
-                               val.split(delimiter))
-                if not keep:
-                    replaced = sorted(set(replaced))
-                vals[index] = delimiter.join(replaced)
-            else:
-                vals[index] = idict.get(val, "?")
+            replaced = map(replace, val.split(delimiter))
+            replaced = filter(None, replaced)
+            if not keep:
+                replaced = sorted(set(replaced))
+            vals[index] = (delimiter or "").join(replaced)
             oufile.write("\t".join(vals) + "\n")
 
