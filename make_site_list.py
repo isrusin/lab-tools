@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 import argparse as ap
+import signal as sg
 import sys
 
 nucls = ["A", "C", "G", "T"]
@@ -13,6 +14,7 @@ def elongate_sites(sites):
     return new_sites
 
 if __name__ == "__main__":
+    sg.signal(sg.SIGPIPE, sg.SIG_DFL)
     parser = ap.ArgumentParser(
             description="Generate list of all sites of the given length."
             )
