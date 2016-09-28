@@ -1,9 +1,11 @@
 #! /usr/bin/python
 
 import argparse as ap
+import signal as sg
 import sys
 
 if __name__ == "__main__":
+    sg.signal(sg.SIGPIPE, sg.SIG_DFL)
     parser = ap.ArgumentParser(
             description="Transform .tsv file with delimited column " +
             "into .dict file."
