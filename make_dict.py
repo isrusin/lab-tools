@@ -51,7 +51,7 @@ if __name__ == "__main__":
                 continue
             for key in keys.split(args.delimiter):
                 if key in result:
-                    sys.stderr.write("Repeated key %s with ")
+                    sys.stderr.write("Repeated key %s with " % key)
                     if result[key] != value:
                         sys.stderr.write("varied values.\n")
                     else:
