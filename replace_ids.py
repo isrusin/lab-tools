@@ -53,18 +53,20 @@ if __name__ == "__main__":
     index = args.index
     keep = args.keep
     delimiter = args.delimiter
+    split = lambda x: x.split(delimiter)
+    if not delimiter:
+        split = lambda x: [x]
     missed = args.missed
+    replace = lambda x: idict.get(x, missed)
     if missed is None:
         replace = lambda x: idict.get(x, x)
-    else:
-        replace = lambda x: idict.get(x, missed)
     with args.infile as infile, args.oufile as oufile:
         if args.title:
             oufile.write(infile.readline())
         for line in infile:
             vals = line.strip().split("\t")
             val = vals[index]
-            replaced = map(replace, val.split(delimiter))
+            replaced = [replace(x) for x in split(val)]
             replaced = filter(None, replaced)
             if not keep:
                 replaced = sorted(set(replaced))
