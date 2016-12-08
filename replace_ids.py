@@ -40,9 +40,14 @@ if __name__ == "__main__":
             not to split values"""
             )
     parser.add_argument(
-            "-k", "--keep-order", dest="keep", action="store_true",
+            "-k", "--keep-order", dest="keep_order", action="store_true",
             help="""keep order of IDs, meaningless with -d without value;
             default behaviour is to sort new IDs and remove duplicates"""
+            )
+    parser.add_argument(
+            "-e", "--keep-empty", dest="keep_empty", action="store_true",
+            help="""keep lines with empty (after ID replacement) ID cell,
+            default behaviour is to skip them"""
             )
     parser.add_argument(
             "-m", "--missed", dest="missed", metavar="STRING", nargs="?",
@@ -57,7 +62,8 @@ if __name__ == "__main__":
             old, new = line.strip().split("\t", 1)
             idict[old] = new
     index = args.index
-    keep = args.keep
+    keep_order = args.keep_order
+    keep_empty = args.keep_empty
     delimiter = args.delimiter
     split = lambda x: x.split(delimiter)
     if not delimiter:
@@ -74,8 +80,9 @@ if __name__ == "__main__":
             val = vals[index]
             replaced = [replace(x) for x in split(val)]
             replaced = filter(None, replaced)
-            if not keep:
+            if not keep_order:
                 replaced = sorted(set(replaced))
             vals[index] = (delimiter or "").join(replaced)
-            oufile.write("\t".join(vals) + "\n")
+            if vals[index] or keep_empty:
+                oufile.write("\t".join(vals) + "\n")
 
