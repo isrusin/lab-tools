@@ -13,7 +13,12 @@ if __name__ == "__main__":
             )
     parser.add_argument(
             "-s", dest="indct", type=ap.FileType("r"), metavar="DICT",
-            required=True, help="source .dct file with IDs mapping"
+            required=True, help="""source .dct file with IDs mapping;
+            it should be tab-separated untitled file with IDs in the
+            first column, line residuals after the first tab will be
+            treated as new IDs (should not be unique actually and could
+            contain any non-line-breaking symbols, including spaces and
+            tabs)"""
             )
     parser.add_argument(
             "-o", "--out", dest="oufile", metavar="FILE",
@@ -49,7 +54,7 @@ if __name__ == "__main__":
     idict = dict()
     with args.indct as indct:
         for line in indct:
-            old, new = line.strip().split("\t")
+            old, new = line.strip().split("\t", 1)
             idict[old] = new
     index = args.index
     keep = args.keep
