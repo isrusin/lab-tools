@@ -36,7 +36,8 @@ if __name__ == "__main__":
             )
     parser.add_argument(
             "-k", "--keep-order", dest="keep", action="store_true",
-            help="keep order of IDs, only with -d"
+            help="""keep order of IDs, meaningless with -d without value;
+            default behaviour is to sort new IDs and remove duplicates"""
             )
     parser.add_argument(
             "-m", "--missed", dest="missed", metavar="STRING", nargs="?",
