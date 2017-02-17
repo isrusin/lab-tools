@@ -13,16 +13,12 @@ import sys
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Sieve a TSV file.", add_help=False,
-        usage="\n\t%(prog)s OPTIONS TSV\nor\t... | %(prog)s OPTIONS --pipe"
+        epilog="""If neither -v nor -l is specified, STDIN will be used
+        as the LIST. The TSV should be passed by name in the case."""
     )
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument(
+    parser.add_argument(
         "intsv", metavar="TSV", type=argparse.FileType("r"), nargs="?",
-        help="input TSV file"
-    )
-    input_group.add_argument(
-        "-p", "--pipe", action="store_true",
-        help=argparse.SUPPRESS
+        default=sys.stdin, help="input TSV file, default is STDIN"
     )
     parser.add_argument(
         "-o", "--out", dest="outsv", metavar="FILE",
@@ -46,8 +42,9 @@ def main(argv=None):
         help="a list of values to filter with"
     )
     set_group.add_argument(
-        "-l", "--list", type=argparse.FileType("r"),
-        default=sys.stdin, help="input file with a list of values"
+        "-l", "--list", dest="inlist", metavar="LIST",
+        type=argparse.FileType("r"), default=sys.stdin,
+        help="input file with a list of values"
     )
     parser.add_argument(
         "-d", "--delimiter", metavar="STR",
@@ -57,6 +54,31 @@ def main(argv=None):
         "-h", "-H", "-?", "--help", action="help", help=argparse.SUPPRESS
     )
     args = parser.parse_args(argv)
+    values = set(args.value or [])
+    if not values:
+        if args.inlist.name == "<stdin>":
+            if args.intsv.name == "<stdin>":
+                sys.stderr.write(
+                    "Error! Both the TSV and the LIST are STDIN!\n"
+                )
+                parser.print_usage(sys.stderr)
+                return 1
+        with args.inlist as inlist:
+            values = set(inlist.read().strip().split(args.delimiter))
+    index = args.column
+    split_num = index + 1
+    check = lambda row: row[index] in values
+    if len(values) == 1:
+        value = values.pop()
+        check = lambda row: row[index] == value
+    reverse = args.reverse
+    with args.intsv as intsv, args.outsv as outsv:
+        if args.title:
+            outsv.write(intsv.readline())
+        for line in intsv:
+            row = line.strip().split("\t", split_num)
+            if check(row) != reverse:
+                outsv.write(line)
 
 if __name__ == "__main__":
     sys.exit(main())
