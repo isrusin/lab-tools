@@ -17,7 +17,7 @@ if __name__ == "__main__":
             )
     parser.add_argument(
             "-d", dest="nspath", metavar="PATH", required=True,
-            help="path to .ns files, use %s placeholder for ACv (ID)."
+            help="path to .ns files, use {} placeholder for ACv (ID)."
             )
     parser.add_argument(
             "-o", dest="outsv", metavar="OUT.tsv", type=ap.FileType("w"),
@@ -30,12 +30,12 @@ if __name__ == "__main__":
         sites = set(instl.read().strip().split("\n"))
     acvs = sorted(acvs)
     nspath = args.nspath
-    if "%" not in nspath:
-        nspath += "/%s.ns"
+    if "{}" not in nspath:
+        nspath += "/{}.ns"
     with args.outsv as outsv:
         is_first = True
         for acv in acvs:
-            with open(nspath % acv) as intab:
+            with open(nspath.format(acv)) as intab:
                 title = intab.readline()
                 if is_first:
                     is_first = False
@@ -43,5 +43,5 @@ if __name__ == "__main__":
                 for line in intab:
                     site, etc = line.split("\t", 1)
                     if site in sites:
-                        outsv.write(acv+"\t"+line.strip()+"\n")
+                        outsv.write(acv + "\t" + line.strip() + "\n")
 
