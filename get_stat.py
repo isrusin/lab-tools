@@ -8,10 +8,10 @@ from markdown.extensions.tables import TableExtension
 import sys
 
 compls = {
-        "A": "T", "T": "A", "C": "G", "G": "C",
-        "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
-        "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
-        }
+    "A": "T", "T": "A", "C": "G", "G": "C",
+    "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
+    "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
+}
 
 NAN = 0
 UNR = 1
@@ -165,10 +165,8 @@ def get_value_str(count, total, value_str, extra_space):
     return value_str.format(count=count_str, percent=percent)
 
 def calc_stat(stat_list, tag, value_str, extra_space, joint_groups=None):
-    _get_value_str = lambda count, total: get_value_str(
-            count, total, value_str, extra_space
-            )
     stat = dict()
+    stat_key = tag + "_%s"
     total = sum(stat_list)
     nan, unr, zero, under, less, one, more, over = stat_list
     bad = nan + unr
@@ -189,82 +187,83 @@ def calc_stat(stat_list, tag, value_str, extra_space, joint_groups=None):
         norm -= joint_groups[(LESS, ONE)]
         norm -= joint_groups[(LESS, MORE)]
         norm -= joint_groups[(ONE, MORE)]
-    stat[tag+"_total"] = total
+    stat[stat_key % "total"] = total
     good = total - bad
-    for abr, count in zip(["nan", "unr", "rel"], [nan, unr, good]):
-        stat["%s_%s" % (tag, abr)] = _get_value_str(count, total)
-    for abr, count in zip(
-            ["zer", "und", "les", "one", "mor", "ove", "nor"],
-            [zero, under, less, one, more, over, norm]
-            ):
-        stat["%s_%s" % (tag, abr)] = _get_value_str(count, good)
+    abbrs = ("nan", "unr", "rel")
+    counts = (nan, unr, good)
+    for abr, count in zip(abbrs, counts):
+        key = stat_key % abr
+        stat[key] = get_value_str(count, total, value_str, extra_space)
+    abbrs = ("zer", "und", "les", "one", "mor", "ove", "nor")
+    counts = (zero, under, less, one, more, over, norm)
+    for abr, count in zip(abbrs, counts):
+        key = stat_key % abr
+        stat[key] = get_value_str(count, good, value_str, extra_space)
     return stat
 
 if __name__ == "__main__":
     parser = ap.ArgumentParser(
-            description="Get site representation statistics."
-            )
+        description="Get site representation statistics."
+    )
     io_group = parser.add_argument_group("input/output arguments")
     io_group.add_argument(
-            "intsv", metavar="INPUT", type=ap.FileType("r"),
-            help="input file with observed and expected numbers"
-            )
+        "intsv", metavar="INPUT", type=ap.FileType("r"),
+        help="input file with observed and expected numbers"
+    )
     io_group.add_argument(
-            "-o", "--out", metavar="OUTPUT", type=ap.FileType("w"),
-            default=sys.stdout, help="""output file, default stdout; note:
-            .md and .html extensions will alter output format"""
-            )
+        "-o", "--out", metavar="OUTPUT", type=ap.FileType("w"),
+        default=sys.stdout, help="""output file, default stdout;
+        note: .md and .html extensions will alter output format"""
+    )
     io_group.add_argument(
-            "-f", "--format", choices=["raw", "md", "html"],
-            help="""output format: 'raw' - raw text, default;
-            'md' - markdown (GitHub dialect); 'html' - HTML,
-            through markdown"""
-            )
+        "-f", "--format", choices=["raw", "md", "html"],
+        help="""output format: 'raw' - raw text, default; 'md' - markdown
+        (GitHub dialect); 'html' - HTML, through markdown"""
+    )
     io_group.add_argument(
-            "--force-short-counts", dest="shorten", action="store_true",
-            help="use short number format even in markdown and html"
-            )
+        "--force-short-counts", dest="shorten", action="store_true",
+        help="use short number format even in markdown and html"
+    )
     cutoff_group = parser.add_argument_group("cutoff arguments")
     cutoff_group.add_argument(
-            "--exp-cutoff", metavar="F", type=float, default=15.0,
-            help="expected number cutoff (less or equal), default 15.0"
-            )
+        "--exp-cutoff", metavar="F", type=float, default=15.0,
+        help="expected number cutoff (less or equal), default 15.0"
+    )
     cutoff_group.add_argument(
-            "--zero-cutoff", metavar="F", type=float, default=0.0,
-            help="zero value cutoff (less or equal), default 0.0"
-            )
+        "--zero-cutoff", metavar="F", type=float, default=0.0,
+        help="zero value cutoff (less or equal), default 0.0"
+    )
     cutoff_group.add_argument(
-            "--under-cutoff", metavar="F", type=float, default=0.78,
-            help="""under-representation cutoff (less or equal),
-            default 0.78"""
-            )
+        "--under-cutoff", metavar="F", type=float, default=0.78,
+        help="""under-representation cutoff (less or equal),
+        default 0.78"""
+    )
     cutoff_group.add_argument(
-            "--over-cutoff", metavar="F", type=float, default=1.23,
-            help="""over-representation cutoff (greater or equal),
-            default 1.23"""
-            )
+        "--over-cutoff", metavar="F", type=float, default=1.23,
+        help="""over-representation cutoff (greater or equal),
+        default 1.23"""
+    )
     index_group = parser.add_argument_group(
-            title="column index arguments", description="""All column
-            indices are counted from 0 and could be negative
-            (-1 for last column)."""
-            )
+        title="column index arguments", description="""All column
+        indices are counted from 0 and could be negative
+        (-1 for last column)."""
+    )
     index_group.add_argument(
-            "-S", "--site-index", metavar="N", type=int, default=1,
-            help="site column index, default 1"
-            )
+        "-S", "--site-index", metavar="N", type=int, default=1,
+        help="site column index, default 1"
+    )
     index_group.add_argument(
-            "-I", "--id-index", metavar="N", type=int, default=0,
-            help="sequence ID column index, default 0"
-            )
+        "-I", "--id-index", metavar="N", type=int, default=0,
+        help="sequence ID column index, default 0"
+    )
     index_group.add_argument(
-            "-E", "--exp-index", metavar="N", type=int, default=-3,
-            help="expected number column index, default -3"
-            )
+        "-E", "--exp-index", metavar="N", type=int, default=-3,
+        help="expected number column index, default -3"
+    )
     index_group.add_argument(
-            "-O", "--obs-index", metavar="N", type=int,
-            help="""observed number column index, default expected number
-            column index - 1"""
-            )
+        "-O", "--obs-index", metavar="N", type=int, default=2,
+        help="observed number column index, default 2"
+    )
 #   parser.add_argument("--no-id")
     args = parser.parse_args()
     # cutoff
@@ -309,7 +308,7 @@ if __name__ == "__main__":
     with args.intsv as intsv:
         intsv.readline()
         for line in intsv:
-            vals = line.strip().split('\t')
+            vals = line.strip().split("\t")
             sid = vals[id_index]
             exp = float(vals[exp_index])
             obs = float(vals[obs_index])
@@ -349,8 +348,8 @@ if __name__ == "__main__":
         t_str = get_value_str(count, total, stats_val_str, fill)
         stats_dct["%s_tot" % abr] = t_str
     oustr = title_str.format(
-            "Single-stranded site representation statistics"
-            )
+        "Single-stranded site representation statistics"
+    )
     oustr += stats_str.format(**stats_dct)
     #    double-stranded sites
     s_stat = [val // 2 for val in s_stat]
@@ -359,16 +358,16 @@ if __name__ == "__main__":
     a_stat = list(map(sum, zip(p_stat, n_stat)))
     for abr, stat in zip(["all", "npl", "dif"], [a_stat, n_stat, d_stat]):
         stats_dct.update(
-                calc_stat(stat, abr, stats_val_str, fill, d_groups)
-                )
+            calc_stat(stat, abr, stats_val_str, fill, d_groups)
+        )
     total = stats_dct["all_total"]
     for abr in ["all", "pal", "npl", "sam", "dif", "inc"]:
         count = stats_dct["%s_total" % abr]
         t_str = get_value_str(count, total, stats_val_str, fill)
         stats_dct["%s_tot" % abr] = t_str
     oustr += title_str.format(
-            "Double-stranded site representation statistics"
-            )
+        "Double-stranded site representation statistics"
+    )
     oustr += stats_str.format(**stats_dct)
     #    joint groups for assymetric sites, counts
     if fill is not None:
@@ -389,9 +388,12 @@ if __name__ == "__main__":
     for g, count in groups_totals.items():
         abr = "%s_to" % group_abrs[g]
         groups_dct[abr] = get_value_str(count, total, groups_num_str, fill)
+    if not md:
+        oustr = oustr.replace("100.0", " 100")
+        oustr = oustr.replace("0   0.0", " --    ")
     oustr += title_str.format(
-            "Joint groups statistics for assymetric sites, counts"
-            )
+        "Joint groups statistics for assymetric sites, counts"
+    )
     oustr += groups_str.format(**groups_dct)
     #    joint groups for assymetric sites, percents
     for (g1, g2), count in d_groups.items():
@@ -401,12 +403,11 @@ if __name__ == "__main__":
         abr = "%s_to" % group_abrs[g]
         groups_dct[abr] = get_value_str(count, total, groups_prc_str, fill)
     oustr += title_str.format(
-            "Joint groups statistics for assymetric sites, percents"
-            )
+        "Joint groups statistics for assymetric sites, percents"
+    )
     oustr += groups_str.format(**groups_dct)
     if not md:
-        oustr = oustr.replace("100.0", " 100")
-        oustr = oustr.replace("0   0.0", " --    ")
+        oustr = oustr.replace("100.0", "  100")
     with args.out as out:
         if out_format == "html":
             html = markdown.markdown(oustr, extensions=[TableExtension()])
