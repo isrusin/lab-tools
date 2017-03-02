@@ -50,14 +50,36 @@ HTML_SEED = """\
       }}
     </style>
   </head>
-  <body>
-@stat
+  <body>@stat
   </body>
 </html>
 """
 
 TITLE_STUBS = {"raw": "\n\t{}:\n\n", "tsv": "#\n#{}\n",
-               "md": "##{}##\n\n", "html": "##{}##\n\n"}
+               "md": "##{}##\n\n", "html": "\n    <h2>{}</h2>\n"}
+
+def make_raw_table_stub(columns, rows, spacer="_",
+                        lab_width=6, cell_width=10):
+    cell = "{{%s{spacer}{abbr}:>%d}}"
+    title = [" " * lab_width]
+    row_stub = ["{name:<%d}" % lab_width]
+    empty = ["-" * lab_width]
+    for name, abbr in columns:
+        title.append(name.center(cell_width))
+        row_stub.append(cell % (abbr, cell_width))
+        empty.append("-" * cell_width)
+    empty = "+".join(empty) + "\n"
+    row_stub = "|".join(row_stub) + "\n"
+    table = ["|".join(title), "\n", empty]
+    for row in rows:
+        if row:
+            name, abbr = row
+            table.append(row_stub.format(
+                name=name, abbr=abbr, spacer=spacer
+            ))
+        else:
+            table.append(empty)
+    return "".join(table)
 
 def make_tsv_table_stub(columns, rows, spacer="_",
                         lab_width=None, cell_width=None):
@@ -88,31 +110,16 @@ def make_md_table_stub(columns, rows, spacer="_",
     table.append("\n\n")
     return "".join(table)
 
-def make_raw_table_stub(columns, rows, spacer="_",
-                        lab_width=6, cell_width=10):
-    cell = "{{%s{spacer}{abbr}:>%d}}"
-    title = [" " * lab_width]
-    row_stub = ["{name:<%d}" % lab_width]
-    empty = ["-" * lab_width]
-    for name, abbr in columns:
-        title.append(name.center(cell_width))
-        row_stub.append(cell % (abbr, cell_width))
-        empty.append("-" * cell_width)
-    empty = "+".join(empty) + "\n"
-    row_stub = "|".join(row_stub) + "\n"
-    table = ["|".join(title), "\n", empty]
-    for row in rows:
-        if row:
-            name, abbr = row
-            table.append(row_stub.format(
-                name=name, abbr=abbr, spacer=spacer
-            ))
-        else:
-            table.append(empty)
-    return "".join(table)
+def make_html_table_stub(columns, rows, spacer="_",
+                         lab_width=None, cell_width=None):
+    md_stub = make_md_table_stub(
+        columns, rows, spacer=spacer,
+        lab_width=lab_width, cell_width=cell_width
+    )
+    return markdown.markdown(md_stub, extensions=[TableExtension()])
 
 TABLE_MAKERS = {"raw": make_raw_table_stub, "tsv": make_tsv_table_stub,
-               "md": make_md_table_stub, "html": make_md_table_stub}
+               "md": make_md_table_stub, "html": make_html_table_stub}
 
 def compress(num, width=4, suffix=" "):
     rank = 0
@@ -171,10 +178,7 @@ class FormatManager(object):
                 "Joint groups statistics for assymetric sites"
             ) + jgstat_stub
         if out_format == "html":
-            html_seed = HTML_SEED
-            html = markdown.markdown(output_stub,
-                                     extensions=[TableExtension()])
-            output_stub = html_seed.replace("@stat", html)
+            output_stub = HTML_SEED.replace("@stat", output_stub)
         self.output_stub = output_stub
         self.prepare_formatters()
 
