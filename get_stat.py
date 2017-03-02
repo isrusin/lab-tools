@@ -1,80 +1,58 @@
 #! /usr/bin/env python
 
 import argparse
-from collections import Counter
 import markdown
 import math
-from markdown.extensions.tables import TableExtension
-from os.path import splitext
 import sys
 
+from collections import Counter
+from markdown.extensions.tables import TableExtension
+from os.path import splitext
 
-NAN = 0
-UNR = 1
-ZERO = 2
-UNDER = 3
-LESS = 4
-ONE = 5
-MORE = 6
-OVER = 7
 
-CBSTAT_STUB = """
-      |    All   |Palindrome|Asymmetric| Coinside |  Differ  |Incomplete
-------+----------+----------+----------+----------+----------+----------
-Total | {all_tot}| {pal_tot}| {npl_tot}| {sam_tot}| {dif_tot}| {inc_tot}
-------+----------+----------+----------+----------+----------+----------
-NaN   | {all_nan}| {pal_nan}| {npl_nan}| {sam_nan}| {dif_nan}| {inc_nan}
-Low   | {all_unr}| {pal_unr}| {npl_unr}| {sam_unr}| {dif_unr}| {inc_unr}
-Good  | {all_rel}| {pal_rel}| {npl_rel}| {sam_rel}| {dif_rel}| {inc_rel}
-------+----------+----------+----------+----------+----------+----------
- <1   | {all_les}| {pal_les}| {npl_les}| {sam_les}| {dif_les}| {inc_les}
-  1   | {all_one}| {pal_one}| {npl_one}| {sam_one}| {dif_one}| {inc_one}
- >1   | {all_mor}| {pal_mor}| {npl_mor}| {sam_mor}| {dif_mor}| {inc_mor}
-------+----------+----------+----------+----------+----------+----------
-  0   | {all_zer}| {pal_zer}| {npl_zer}| {sam_zer}| {dif_zer}| {inc_zer}
-Under | {all_und}| {pal_und}| {npl_und}| {sam_und}| {dif_und}| {inc_und}
-Norm  | {all_nor}| {pal_nor}| {npl_nor}| {sam_nor}| {dif_nor}| {inc_nor}
-Over  | {all_ove}| {pal_ove}| {npl_ove}| {sam_ove}| {dif_ove}| {inc_ove}
-"""
+NAN, UNR, ZERO, UNDER, OVER, LESS, MORE, ONE = (0, 1, 2, 3, 4, 5, 6, 7)
+ABBRS = ["nan", "low", "zer", "und", "ove", "les", "mor", "one"]
 
-JGSTAT_STUB = """
-      |  NaN  |  Low  |   0   | Under |   <1  |   1   |   >1  |  Over |
-------+-------+-------+-------+-------+-------+-------+-------+-------+
-Total |{na_to}|{lo_to}|{ze_to}|{un_to}|{le_to}|{on_to}|{mo_to}|{ov_to}|
-------+-------+-------+-------+-------+-------+-------+-------+-------'
-Over  |{na_ov}|{lo_ov}|{ze_ov}|{un_ov}|{le_ov}|{on_ov}|{mo_ov}|
-------+-------+-------+-------+-------+-------+-------+-------'
- >1   |{na_mo}|{lo_mo}|{ze_mo}|{un_mo}|{le_mo}|{on_mo}|
-------+-------+-------+-------+-------+-------+-------'
-  1   |{na_on}|{lo_on}|{ze_on}|{un_on}|{le_on}|
-------+-------+-------+-------+-------+-------'
- <1   |{na_le}|{lo_le}|{ze_le}|{un_le}|
-------+-------+-------+-------+-------'
-Under |{na_un}|{lo_un}|{ze_un}|
-------+-------+-------+-------'
-  0   |{na_ze}|{lo_ze}|
-------+-------+-------'
-Low   |{na_lo}|
-------+-------'
-"""
+COMPLS = {
+    "A": "T", "T": "A", "C": "G", "G": "C",
+    "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
+    "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
+}
 
-HTML_SEED = """
+CBCOLS = (
+    ("All", "all"), ("Palindrome", "pal"),
+    ("Asymmetric", "npl"), ("Coinside", "sam"),
+    ("Differ", "dif"), ("Incomplete", "inc")
+)
+CBROWS = (
+    ("Total", "tot"), None,
+    ("NaN", "nan"), ("Low", "low"), ("Good", "rel"), None,
+    ("<1", "les"), ("1", "one"), (">1", "mor"), None,
+    ("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove")
+)
+JGCOLS = (
+    ("NaN", "nan"), ("Low", "low"), ("0", "zer"), ("Under", "und"),
+    ("<1", "les"), ("1", "one"), (">1", "mor"), ("Over", "ove")
+)
+JGROWS = JGCOLS + (None, ("Total", "tot"))
+
+HTML_SEED = """\
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>CBstat</title>
     <style type="text/css">
-      table {
+      table {{
         border-collapse: collapse;
-      }
-      td, th {
+      }}
+      td, th {{
         padding: 1mm 3mm 1mm 3mm;
         border: 1px solid black;
-      }
-      th {
+      }}
+      th {{
         background: #ccffff;
         text-align: center;
-      }
+      }}
     </style>
   </head>
   <body>
@@ -83,166 +61,268 @@ HTML_SEED = """
 </html>
 """
 
-def table_to_markdown(table):
-    lines = table.strip("\n").split("\n")
-    tcells = [c.strip() for c in lines.pop(0).strip("\n|").split("|")]
-    if not tcells[0]:
-        tcells[0] = "  "
-    cols_num = len(tcells)
-    table_md = "| %s |\n" % " | ".join(tcells)
-    table_md += "|:%s:|\n" % ":|-".join("-" * len(c) for c in tcells)
-    table_md = table_md.replace(":|-", "-|-", 1)
-    for line in lines:
-        if "|" in line:
-            cells = [c.strip() for c in line.strip("\n|").split("|")]
-            appendix = [" "] * (cols_num - len(cells))
-            cells.extend(appendix)
-            cells[0] = "**%s**" % cells[0]
-            table_md += "| %s |\n" % " | ".join(cells)
-    table_md += "\n"
-    return table_md
+def make_md_table_stub(columns, rows, spacer="_",
+                       lab_width=None, cell_width=None):
+    cell = " {%s" + spacer + "%s} |"
+    table = ["| | ", " | ".join(name for name, abbr in columns), " |\n"]
+    table.extend(
+        ["|:-|-", ":|-".join("-" * len(col) for col, _ in columns), ":|\n"]
+    )
+    for row in rows:
+        if row:
+            name, abbr = row
+            table.append("| **%s** |" % name)
+            table.extend(cell % (cabbr, abbr) for _, cabbr in columns)
+            table.append("\n")
+    table.append("\n\n")
+    return "".join(table)
 
-def fill_value_str(count, total, value_str, extra_space=None):
-    percent = (100.0 * count / total) if total else 0
-    if extra_space is None:
-        count_str = "{:d}".format(count)
-    else:
-        count_str_stub = "{0:.%df}"
-        rank = ""
-        if count >= 1000000:
-            rank = "M"
-            count /= 1000000.0
-        elif count >= 1000:
-            rank = "k"
-            count /= 1000.0
-        precision = 0
-        if rank:
-            precision = max(0, 2 - len(str(int(count))) + extra_space)
-        count_str_stub = count_str_stub % precision
-        count_str = count_str_stub.format(count)
-        if len(count_str) > 3 + extra_space:
-            count_str = count_str[:-1].strip(".")
-        count_str += (rank or " ")
-    return value_str.format(count=count_str, percent=percent)
+def make_raw_table_stub(columns, rows, spacer="_",
+                        lab_width=6, cell_width=10):
+    cell = "{{%s{spacer}{abbr}:>%d}}"
+    title = [" " * lab_width]
+    row_stub = ["{name:<%d}" % lab_width]
+    empty = ["-" * lab_width]
+    for name, abbr in columns:
+        title.append(name.center(cell_width))
+        row_stub.append(cell % (abbr, cell_width))
+        empty.append("-" * cell_width)
+    empty = "+".join(empty) + "\n"
+    row_stub = "|".join(row_stub) + "\n"
+    table = ["|".join(title), "\n", empty]
+    for row in rows:
+        if row:
+            name, abbr = row
+            table.append(row_stub.format(
+                name=name, abbr=abbr, spacer=spacer
+            ))
+        else:
+            table.append(empty)
+    return "".join(table)
 
-def to_ds(site):
-    compls = {
-        "A": "T", "T": "A", "C": "G", "G": "C",
-        "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
-        "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
-    }
-    rsite = ""
-    for nucl in site[::-1]:
-        rsite += compls.get(nucl, "?")
-    return min(site, rsite), max(site, rsite)
+def compress(num, width=4, suffix=" "):
+    rank = 0
+    while num >= 1000:
+        num = num / 1000.0
+        rank += 1
+    suffixes = [suffix, "k", "M", "G", "T", "P", "E", "Z", "Y"]
+    prec = max(0, width - len("%.0f" % num) - 1)
+    stub = "{:>%d.%df}%s" % (width, prec, suffixes[rank])
+    return stub.format(num)
 
-def parse_line(line, indices):
-    id_index, site_index, obs_index, exp_index = indices
-    vals = line.strip().split("\t")
-    sid = vals[id_index]
-    site = to_ds(vals[site_index])
-    obs = float(vals[obs_index])
-    exp = float(vals[exp_index])
-    return sid, site, obs, exp
+def formatter(count, total, skip_zeros=False,
+              keep_count=True, count_width=None, count_suffix=" ",
+              keep_perc=True, perc_width=None, perc_suffix=""):
+    vals = []
+    if keep_count:
+        count_str = "%d" % count
+        if count_width:
+            count_str = compress(count, count_width, count_suffix)
+        vals.append(count_str)
+    if keep_perc:
+        perc = (count * 100.0 / total) if total else 0
+        perc_str = "(%.1f%%)" % perc
+        if perc_width:
+            perc_str = compress(perc, perc_width, perc_suffix)
+        vals.append(perc_str)
+    answer = " ".join(vals)
+    if skip_zeros and set(answer).issubset({" ", "0", ".", "%", "(", ")"}):
+        answer = " " * len(answer)
+    return answer
 
-def classify(obs, exp, cutoffs):
-    exp_cutoff, zero_cutoff, under_cutoff, over_cutoff = cutoffs
-    group = ONE
-    if math.isnan(exp) or math.isinf(exp) or exp == 0:
-        group = NAN
-    elif exp <= exp_cutoff:
-        group = UNR
-    else:
-        ratio = obs / exp
-        if ratio < 1.0:
-            if ratio <= zero_cutoff:
-                group = ZERO
-            elif ratio <= under_cutoff:
-                group = UNDER
-            else:
+class FormatManager(object):
+    def __init__(self, out_format, cbsection="both", jgsection="both",
+                 shorten_vals=True):
+        stub_maker = make_raw_table_stub
+        title_stub = "\n\n\t{}:\n"
+        self.shorten_vals = True
+        if out_format != "raw":
+            stub_maker = make_md_table_stub
+            title_stub = "##{}##\n\n"
+            self.shorten_vals = shorten_vals
+        if jgsection == "both" and self.shorten_vals:
+            jgsection = "counts"
+        self.jgsection = jgsection
+        cbstat_ss_stub = stub_maker(CBCOLS, CBROWS)
+        cbstat_ds_stub = stub_maker(CBCOLS[:-1], CBROWS, spacer="2")
+        jgstat_stub = stub_maker(JGCOLS, JGROWS, cell_width=7)
+        output_stub = ""
+        if cbsection:
+            if cbsection != "ds":
+                output_stub += title_stub.format(
+                    "Compositional bias statistics, single-stranded sites"
+                ) + cbstat_ss_stub
+            if cbsection != "ss":
+                output_stub += title_stub.format(
+                    "Compositional bias statistics, double-stranded sites"
+                ) + cbstat_ds_stub
+        if jgsection:
+            output_stub += title_stub.format(
+                "Joint groups statistics for assymetric sites"
+            ) + jgstat_stub
+        if out_format == "html":
+            html_seed = HTML_SEED
+            html = markdown.markdown(output_stub,
+                                     extensions=[TableExtension()])
+            output_stub = html_seed.replace("@stat", html)
+        self.output_stub = output_stub
+        self.prepare_formatters()
+
+    def prepare_formatters(self):
+        self.cbformatter = formatter
+        self.jgformatter = lambda count, total: formatter(
+            count, total,
+            keep_count=(self.jgsection != "percents"),
+            keep_perc=(self.jgsection != "counts")
+        )
+        if self.shorten_vals:
+            self.cbformatter = lambda count, total: formatter(
+                count, total, count_width=3, perc_width=4, skip_zeros=True
+            )
+            self.jgformatter = lambda count, total: formatter(
+                count, total, count_width=1, perc_width=4,
+                keep_count=(self.jgsection != "percents"),
+                keep_perc=(self.jgsection != "counts"),
+                perc_suffix="%", skip_zeros=True
+            ) + " "
+
+    def make_output(self, cbvals, jgvals):
+        prepared_vals = dict(
+            (k, self.cbformatter(*v)) for k, v in cbvals.items()
+        )
+        prepared_vals.update(
+            (k, self.jgformatter(*v)) for k, v in jgvals.items()
+        )
+        return self.output_stub.format(**prepared_vals)
+
+class LineParser(object):
+    def __init__(self, indices, cutoffs):
+        id_index, site_index, obs_index, exp_index = indices
+        self.id_index = id_index
+        self.site_index = site_index
+        self.obs_index = obs_index
+        self.exp_index = exp_index
+        exp_cutoff, zero_cutoff, under_cutoff, over_cutoff = cutoffs
+        self.exp_cutoff = exp_cutoff
+        self.zero_cutoff = zero_cutoff
+        self.under_cutoff = under_cutoff
+        self.over_cutoff = over_cutoff
+
+    def __call__(self, line):
+        vals = line.strip().split("\t")
+        sid = vals[self.id_index]
+        site = vals[self.site_index]
+        rsite = "".join(COMPLS.get(nucl, "?") for nucl in site[::-1])
+        site_ds = (site, rsite) if site < rsite else (rsite, site)
+        obs = float(vals[self.obs_index])
+        exp = float(vals[self.exp_index])
+        group = ONE
+        if math.isnan(exp) or math.isinf(exp) or exp == 0:
+            group = NAN
+        elif exp <= self.exp_cutoff:
+            group = UNR
+        else:
+            ratio = obs / exp
+            if ratio < 1.0:
                 group = LESS
-        elif ratio > 1.0:
-            if ratio >= over_cutoff:
-                group = OVER
-            else:
-                group = MORE
-    return group
+                if ratio <= self.under_cutoff:
+                    group = UNDER if ratio > self.zero_cutoff else ZERO
+            elif ratio > 1.0:
+                group = MORE if ratio < self.over_cutoff else OVER
+        return sid, site_ds, group
 
-def collect_stat(intsv, line_parser_func, classify_func):
-    stats = {
-        "pal": [0] * 8, # palindromes
-        "sam": [0] * 8, # coinside
-        "dif": [0] * 8, # differ
-        "inc": [0] * 8, # incomplete
+def collect_stat(intsv, line_parser):
+    cbstat_ss = {
+        "pal": [0] * len(ABBRS), # palindromes
+        "sam": [0] * len(ABBRS), # coinside
+        "dif": [0] * len(ABBRS), # differ
+        "inc": [0] * len(ABBRS), # incomplete
     }
     waits = dict()
-    jg_stat = Counter()
+    jgstat = Counter()
     with intsv:
         intsv.readline()
         for line in intsv:
-            sid, site, obs, exp = line_parser_func(line)
+            sid, site, group = line_parser(line)
             wsite, csite = site
-            group = classify_func(obs, exp)
             if wsite != csite:
                 pr = (sid, site)
                 if pr in waits:
                     cgroup = waits.pop(pr)
                     if cgroup == group:
-                        stats["sam"][group] += 2
+                        cbstat_ss["sam"][group] += 2
                     else:
-                        stats["dif"][group] += 1
-                        stats["dif"][cgroup] += 1
-                        jg_stat[tuple(sorted([group, cgroup]))] += 1
+                        cbstat_ss["dif"][group] += 1
+                        cbstat_ss["dif"][cgroup] += 1
+                        if group < cgroup:
+                            jgstat[(group, cgroup)] += 1
+                        else:
+                            jgstat[(cgroup, group)] += 1
                 else:
                     waits[pr] = group
             else:
-                stats["pal"][group] += 1
+                cbstat_ss["pal"][group] += 1
     for group in waits.values():
-        stats["inc"][group] += 1
-    stats["npl"] = [
-        sum(v) for v in zip(stats["sam"], stats["dif"], stats["inc"])
-    ]
-    stats["all"] = [sum(v) for v in zip(stats["pal"], stats["npl"])]
-    return stats, jg_stat
+        cbstat_ss["inc"][group] += 1
+    cbstat_ds = dict()
+    cbstat_ds["pal"] = cbstat_ss["pal"]
+    cbstat_ds["sam"] = [val//2 for val in cbstat_ss["sam"]]
+    cbstat_ds_dif = [0] * len(ABBRS)
+    for (group, _group), count in jgstat.items():
+        cbstat_ds_dif[group] += count # difs counted into major group
+    cbstat_ds["dif"] = cbstat_ds_dif
+    return cbstat_ss, cbstat_ds, jgstat
 
-def calc_stat(stat_list, tag, value_str, extra_space, joint_groups=None):
-    stat = dict()
-    stat_key = tag + "_%s"
-    total = sum(stat_list)
-    nan, unr, zero, under, less, one, more, over = stat_list
-    bad = nan + unr
-    norm = less + one + more
-    under += zero
-    less += under
-    more += over
-    if joint_groups:
-        total -= sum(joint_groups.values())
-        for (g1, g2), count in joint_groups.items():
-            if g1 == NAN or g1 == UNR:
-                bad -= count
-        under -= joint_groups[(ZERO, UNDER)]
-        less -= joint_groups[(ZERO, UNDER)]
-        less -= joint_groups[(ZERO, LESS)]
-        less -= joint_groups[(UNDER, LESS)]
-        more -= joint_groups[(MORE, OVER)]
-        norm -= joint_groups[(LESS, ONE)]
-        norm -= joint_groups[(LESS, MORE)]
-        norm -= joint_groups[(ONE, MORE)]
-    stat[stat_key % "total"] = total
-    good = total - bad
-    abbrs = ("nan", "unr", "rel")
-    counts = (nan, unr, good)
-    for abr, count in zip(abbrs, counts):
-        key = stat_key % abr
-        stat[key] = fill_value_str(count, total, value_str, extra_space)
-    abbrs = ("zer", "und", "les", "one", "mor", "ove", "nor")
-    counts = (zero, under, less, one, more, over, norm)
-    for abr, count in zip(abbrs, counts):
-        key = stat_key % abr
-        stat[key] = fill_value_str(count, good, value_str, extra_space)
-    return stat
+def summarize_cbstat(cbstat, spacer="_"):
+    vals = dict()
+    clusters = dict()
+    for group_abbr, counts in cbstat.items():
+        counter = Counter()
+        for count, abbr in zip(counts, ABBRS):
+            counter[abbr] += count
+        counter["tot"] = sum(counter.values())
+        counter["rel"] = counter["tot"] - (counter["nan"] + counter["low"])
+        counter["nor"] = counter["les"] + counter["one"] + counter["mor"]
+        counter["und"] += counter["zer"]
+        counter["les"] += counter["und"]
+        counter["mor"] += counter["ove"]
+        clusters[group_abbr] = counter
+    clusters["npl"] = clusters["sam"].copy()
+    clusters["npl"].update(clusters["dif"])
+    if "inc" in clusters:
+        clusters["npl"].update(clusters["inc"])
+    clusters["all"] = clusters["pal"].copy()
+    clusters["all"].update(clusters["npl"])
+    total = clusters["all"]["tot"]
+    for group_abbr, counter in clusters.items():
+        group_total = counter["tot"]
+        group_good = counter["rel"]
+        for abbr, count in counter.items():
+            key = spacer.join([group_abbr, abbr])
+            if abbr == "tot":
+                vals[key] = (count, total)
+            elif abbr in ["nan", "low", "rel"]:
+                vals[key] = (count, group_total)
+            else:
+                vals[key] = (count, group_good)
+    return vals
 
-def parse_args(argv):
+def summarize_jgstat(jgstat, spacer="_"): # jgstat is a Counter instance
+    total = sum(jgstat.values()) * 2
+    group_totals = Counter()
+    for (group1, group2), count in jgstat.items():
+        group_totals[ABBRS[group1]] += count
+        group_totals[ABBRS[group2]] += count
+    vals = dict()
+    for i, abbr1 in enumerate(ABBRS):
+        group_total = group_totals[abbr1]
+        vals[abbr1 + spacer + "tot"] = (group_total, total)
+        for j, abbr2 in enumerate(ABBRS):
+            value = jgstat[(i, j) if i < j else (j, i)]
+            vals[abbr1 + spacer + abbr2] = (value, group_total)
+    return vals
+
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Get site compositional bias statistics."
     )
@@ -305,125 +385,28 @@ def parse_args(argv):
         "-O", "--obs-index", metavar="N", type=int, default=2,
         help="observed number column index, default 2"
     )
-#   parser.add_argument("--no-id")
     args = parser.parse_args(argv)
+    indices = (
+        args.id_index, args.site_index, args.obs_index, args.exp_index
+    )
     cutoffs = (
         args.exp_cutoff, args.zero_cutoff,
         args.under_cutoff, args.over_cutoff
     )
-    cb_classifier = lambda obs, exp: classify(obs, exp, cutoffs)
-    indices = (
-        args.id_index, args.site_index, args.obs_index, args.exp_index
-    )
-    line_parser = lambda line: parse_line(line, indices)
+    line_parser = LineParser(indices, cutoffs)
     out_format = args.format
     if not out_format:
         out_format = "raw"
         out_ext = splitext(args.out.name)[-1]
         if out_ext in [".md", ".html"]:
             out_format = out_ext[1:]
-    fill = 0 if out_format == "raw" or args.shorten else None
-    return (args.intsv, line_parser, cb_classifier, fill,
-            out_format, args.out)
-
-def main(argv=None):
-    intsv, parser, classifier, fill, out_format, out = parse_args(argv)
-    title_str = "\n\n\t{}:\n"
-    stats_str = CBSTAT_STUB
-    stats_val_str = "{count:>4s} {percent:>4.1f}"
-    make_markdown = out_format != "raw"
-    if make_markdown:
-        title_str = "\n\n##{}##\n\n"
-        stats_str = table_to_markdown(stats_str)
-        stats_val_str = "{count} ({percent:.1f}%)"
-    # collect stats
-    stats, jg_stat = collect_stat(intsv, parser, classifier)
-    #    single-stranded sites
-    stats_dct = dict()
-    for abbr, stat in stats.items():
-        stats_dct.update(calc_stat(stat, abbr, stats_val_str, fill))
-    total = stats_dct["all_total"]
-    for abbr in stats.keys():
-        count = stats_dct["%s_total" % abbr]
-        t_str = fill_value_str(count, total, stats_val_str, fill)
-        stats_dct["%s_tot" % abbr] = t_str
-    oustr = title_str.format(
-        "Compositional bias statistics, single-stranded sites"
-    )
-    oustr += stats_str.format(**stats_dct)
-    #    double-stranded sites
-    stats["sam"] = [val // 2 for val in stats["sam"]]
-    stats_dct.update(calc_stat(stats["sam"], "sam", stats_val_str, fill))
-    stats["npl"] = [
-        sum(v) for v in zip(stats["sam"], stats["dif"], stats["inc"])
-    ]
-    stats["all"] = [sum(v) for v in zip(stats["pal"], stats["npl"])]
-    for abbr in ["all", "npl", "dif"]:
-        stats_dct.update(
-            calc_stat(stats[abbr], abbr, stats_val_str, fill, jg_stat)
-        )
-    total = stats_dct["all_total"]
-    for abbr in stats.keys():
-        count = stats_dct["%s_total" % abbr]
-        t_str = fill_value_str(count, total, stats_val_str, fill)
-        stats_dct["%s_tot" % abbr] = t_str
-    oustr += title_str.format(
-        "Compositional bias statistics, double-stranded sites"
-    )
-    oustr += stats_str.format(**stats_dct)
-    if not make_markdown:
-        oustr = oustr.replace("100.0", " 100")
-        oustr = oustr.replace("0   0.0", " --    ")
-    #    joint groups for assymetric sites
-    oustr += joint_groups_statistics(jg_stat, fill, make_markdown)
-    with out:
-        if out_format == "html":
-            html_seed = HTML_SEED
-            html = markdown.markdown(oustr, extensions=[TableExtension()])
-            oustr = html_seed.replace("@stat", html)
-        out.write(oustr)
-
-def joint_groups_statistics(d_groups, fill, markdown=False, which="both"):
-    stub = "\n\n\t{title}:\n" + JGSTAT_STUB
-    num_str = "{count:>6s} "
-    prc_str = "{percent:>5.1f}% "
-    if markdown:
-        stub = "\n\n##{title}##\n\n" + table_to_markdown(JGSTAT_STUB)
-        num_str = "{count}"
-        prc_str = "{percent:.1f}%"
-    if fill is not None:
-        fill += 1
-    total = sum(d_groups.values())
-    group_abbrs = ["na", "lo", "ze", "un", "le", "on", "mo", "ov", "to"]
-    total_index = len(group_abbrs) - 1
-    for g1 in range(total_index):
-        for g2 in range(g1 + 1, total_index):
-            if (g1, g2) not in d_groups:
-                d_groups[(g1, g2)] = 0
-            d_groups[(g1, total_index)] += d_groups[(g1, g2)]
-            d_groups[(g2, total_index)] += d_groups[(g1, g2)]
-    oustr = ""
-    if which != "percents":
-        oustr += group_statistics_str(
-            d_groups, group_abbrs, stub,
-            lambda val: fill_value_str(val, total, num_str, fill)
-        )
-    if which != "counts":
-        oustr += group_statistics_str(
-            d_groups, group_abbrs, stub,
-            lambda val: fill_value_str(val, total, prc_str, fill)
-        )
-    if not markdown:
-        oustr = oustr.replace("100.0", "  100")
-    return oustr
-
-def group_statistics_str(d_groups, abbrs, stub, str_value):
-    vals_dct = {"title": "Joint groups statistics for assymetric sites"}
-    for groups, count in d_groups.items():
-        abbr = "_".join(abbrs[group] for group in groups)
-        vals_dct[abbr] = str_value(count)
-    return stub.format(**vals_dct)
-
+    format_manager = FormatManager(out_format, shorten_vals=args.shorten)
+    cbstat_ss, cbstat_ds, jgstat = collect_stat(args.intsv, line_parser)
+    cbvals = summarize_cbstat(cbstat_ss)
+    cbvals.update(summarize_cbstat(cbstat_ds, spacer="2"))
+    jgvals = summarize_jgstat(jgstat)
+    with args.out as out:
+        out.write(format_manager.make_output(cbvals, jgvals))
 
 if __name__ == "__main__":
     sys.exit(main())
