@@ -13,27 +13,22 @@ from os.path import splitext
 NAN, UNR, ZERO, UNDER, OVER, LESS, MORE, ONE = (0, 1, 2, 3, 4, 5, 6, 7)
 ABBRS = ["nan", "low", "zer", "und", "ove", "les", "mor", "one"]
 
-COMPLS = {
-    "A": "T", "T": "A", "C": "G", "G": "C",
-    "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
-    "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
-}
+COMPLS = {"A": "T", "T": "A", "C": "G", "G": "C",
+          "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
+          "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"}
 
-CBCOLS = (
-    ("All", "all"), ("Palindrome", "pal"),
-    ("Asymmetric", "npl"), ("Coinside", "sam"),
-    ("Differ", "dif"), ("Incomplete", "inc")
-)
-CBROWS = (
-    ("Total", "tot"), None,
-    ("NaN", "nan"), ("Low", "low"), ("Good", "rel"), None,
-    ("<1", "les"), ("1", "one"), (">1", "mor"), None,
-    ("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove")
-)
-JGCOLS = (
-    ("NaN", "nan"), ("Low", "low"), ("0", "zer"), ("Under", "und"),
-    ("<1", "les"), ("1", "one"), (">1", "mor"), ("Over", "ove")
-)
+CBCOLS = (("All", "all"), ("Palindrome", "pal"),
+          ("Asymmetric", "npl"), ("Coinside", "sam"),
+          ("Differ", "dif"), ("Incomplete", "inc"))
+
+CBROWS = (("Total", "tot"), None,
+          ("NaN", "nan"), ("Low", "low"), ("Good", "rel"), None,
+          ("<1", "les"), ("1", "one"), (">1", "mor"), None,
+          ("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove"))
+
+JGCOLS = (("NaN", "nan"), ("Low", "low"), ("0", "zer"), ("Under", "und"),
+          ("<1", "les"), ("1", "one"), (">1", "mor"), ("Over", "ove"))
+
 JGROWS = JGCOLS + (None, ("Total", "tot"))
 
 HTML_SEED = """\
@@ -55,27 +50,13 @@ HTML_SEED = """\
       }}
     </style>
   </head>
-  <body>
-@stat
+  <body>@stat
   </body>
 </html>
 """
 
-def make_md_table_stub(columns, rows, spacer="_",
-                       lab_width=None, cell_width=None):
-    cell = " {%s" + spacer + "%s} |"
-    table = ["| | ", " | ".join(name for name, abbr in columns), " |\n"]
-    table.extend(
-        ["|:-|-", ":|-".join("-" * len(col) for col, _ in columns), ":|\n"]
-    )
-    for row in rows:
-        if row:
-            name, abbr = row
-            table.append("| **%s** |" % name)
-            table.extend(cell % (cabbr, abbr) for _, cabbr in columns)
-            table.append("\n")
-    table.append("\n\n")
-    return "".join(table)
+TITLE_STUBS = {"raw": "\n\t{}:\n\n", "tsv": "#\n#{}\n",
+               "md": "##{}##\n\n", "html": "\n    <h2>{}</h2>\n"}
 
 def make_raw_table_stub(columns, rows, spacer="_",
                         lab_width=6, cell_width=10):
@@ -99,6 +80,49 @@ def make_raw_table_stub(columns, rows, spacer="_",
         else:
             table.append(empty)
     return "".join(table)
+
+def make_tsv_table_stub(columns, rows, spacer="_",
+                        lab_width=None, cell_width=None):
+    title = ["#"]
+    row_stub = ["{name}"]
+    for name, abbr in columns:
+        title.append(name)
+        row_stub.append("{{%s%s{abbr}}}" % (abbr, spacer))
+    row_stub = "\t".join(row_stub) + "\n"
+    table = ["\t".join(title), "\n"]
+    for row in rows:
+        if not row:
+            continue
+        name, abbr = row
+        table.append(row_stub.format(name=name, abbr=abbr))
+    return "".join(table)
+
+def make_md_table_stub(columns, rows, spacer="_",
+                       lab_width=None, cell_width=None):
+    cell = " {%s" + spacer + "%s} |"
+    table = ["| | ", " | ".join(name for name, abbr in columns), " |\n"]
+    table.extend(
+        ["|:-|-", ":|-".join("-" * len(col) for col, _ in columns), ":|\n"]
+    )
+    for row in rows:
+        if row:
+            name, abbr = row
+            table.append("| **%s** |" % name)
+            table.extend(cell % (cabbr, abbr) for _, cabbr in columns)
+            table.append("\n")
+    table.append("\n\n")
+    return "".join(table)
+
+def make_html_table_stub(columns, rows, spacer="_",
+                         lab_width=None, cell_width=None):
+    md_stub = make_md_table_stub(
+        columns, rows, spacer=spacer,
+        lab_width=lab_width, cell_width=cell_width
+    )
+    return markdown.markdown(md_stub, extensions=[TableExtension()])
+
+TABLE_MAKERS = {"raw": make_raw_table_stub, "tsv": make_tsv_table_stub,
+               "md": make_md_table_stub, "html": make_html_table_stub}
 
 def compress(num, width=4, suffix=" "):
     rank = 0
@@ -133,13 +157,9 @@ def formatter(count, total, skip_zeros=False,
 class FormatManager(object):
     def __init__(self, out_format, cbsection="both", jgsection="both",
                  shorten_vals=True):
-        stub_maker = make_raw_table_stub
-        title_stub = "\n\n\t{}:\n"
-        self.shorten_vals = True
-        if out_format != "raw":
-            stub_maker = make_md_table_stub
-            title_stub = "##{}##\n\n"
-            self.shorten_vals = shorten_vals
+        title_stub = TITLE_STUBS[out_format]
+        stub_maker = TABLE_MAKERS[out_format]
+        self.shorten_vals = shorten_vals or out_format == "raw"
         if jgsection == "both" and self.shorten_vals:
             jgsection = "counts"
         self.jgsection = jgsection
@@ -161,10 +181,7 @@ class FormatManager(object):
                 "Joint groups statistics for assymetric sites"
             ) + jgstat_stub
         if out_format == "html":
-            html_seed = HTML_SEED
-            html = markdown.markdown(output_stub,
-                                     extensions=[TableExtension()])
-            output_stub = html_seed.replace("@stat", html)
+            output_stub = HTML_SEED.replace("@stat", output_stub)
         self.output_stub = output_stub
         self.prepare_formatters()
 
@@ -337,9 +354,9 @@ def main(argv=None):
         note: .md and .html extensions will alter output format"""
     )
     io_group.add_argument(
-        "-f", "--format", choices=["raw", "md", "html"],
-        help="""output format: 'raw' - raw text, default; 'md' - markdown
-        (GitHub dialect); 'html' - HTML, through markdown"""
+        "-f", "--format", choices=["raw", "tsv", "md", "html"],
+        help="""output format: 'raw' - raw text, default; 'tsv' - TSV;
+        'md' - markdown (GitHub dialect); 'html' - HTML, through md"""
     )
     io_group.add_argument(
         "--force-short-counts", dest="shorten", action="store_true",
@@ -398,7 +415,7 @@ def main(argv=None):
     if not out_format:
         out_format = "raw"
         out_ext = splitext(args.out.name)[-1]
-        if out_ext in [".md", ".html"]:
+        if out_ext in [".md", ".tsv", ".html"]:
             out_format = out_ext[1:]
     format_manager = FormatManager(out_format, shorten_vals=args.shorten)
     cbstat_ss, cbstat_ds, jgstat = collect_stat(args.intsv, line_parser)
