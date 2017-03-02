@@ -83,14 +83,17 @@ def make_raw_table_stub(columns, rows, spacer="_",
 
 def make_tsv_table_stub(columns, rows, spacer="_",
                         lab_width=None, cell_width=None):
-    title = [""]
+    title = ["#"]
     row_stub = ["{name}"]
     for name, abbr in columns:
         title.append(name)
         row_stub.append("{{%s%s{abbr}}}" % (abbr, spacer))
     row_stub = "\t".join(row_stub) + "\n"
     table = ["\t".join(title), "\n"]
-    for name, abbr in rows:
+    for row in rows:
+        if not row:
+            continue
+        name, abbr = row
         table.append(row_stub.format(name=name, abbr=abbr))
     return "".join(table)
 
@@ -351,9 +354,9 @@ def main(argv=None):
         note: .md and .html extensions will alter output format"""
     )
     io_group.add_argument(
-        "-f", "--format", choices=["raw", "md", "html"],
-        help="""output format: 'raw' - raw text, default; 'md' - markdown
-        (GitHub dialect); 'html' - HTML, through markdown"""
+        "-f", "--format", choices=["raw", "tsv", "md", "html"],
+        help="""output format: 'raw' - raw text, default; 'tsv' - TSV;
+        'md' - markdown (GitHub dialect); 'html' - HTML, through md"""
     )
     io_group.add_argument(
         "--force-short-counts", dest="shorten", action="store_true",
@@ -412,7 +415,7 @@ def main(argv=None):
     if not out_format:
         out_format = "raw"
         out_ext = splitext(args.out.name)[-1]
-        if out_ext in [".md", ".html"]:
+        if out_ext in [".md", ".tsv", ".html"]:
             out_format = out_ext[1:]
     format_manager = FormatManager(out_format, shorten_vals=args.shorten)
     cbstat_ss, cbstat_ds, jgstat = collect_stat(args.intsv, line_parser)
