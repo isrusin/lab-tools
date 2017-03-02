@@ -61,6 +61,19 @@ HTML_SEED = """\
 </html>
 """
 
+def make_tsv_table_stub(columns, rows, spacer="_",
+                        lab_width=None, cell_width=None):
+    title = [""]
+    row_stub = ["{name}"]
+    for name, abbr in columns:
+        title.append(name)
+        row_stub.append("{{%s%s{abbr}}}" % (abbr, spacer))
+    row_stub = "\t".join(row_stub) + "\n"
+    table = ["\t".join(title), "\n"]
+    for name, abbr in rows:
+        table.append(row_stub.format(name=name, abbr=abbr))
+    return "".join(table)
+
 def make_md_table_stub(columns, rows, spacer="_",
                        lab_width=None, cell_width=None):
     cell = " {%s" + spacer + "%s} |"
