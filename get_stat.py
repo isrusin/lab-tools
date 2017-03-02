@@ -13,27 +13,22 @@ from os.path import splitext
 NAN, UNR, ZERO, UNDER, OVER, LESS, MORE, ONE = (0, 1, 2, 3, 4, 5, 6, 7)
 ABBRS = ["nan", "low", "zer", "und", "ove", "les", "mor", "one"]
 
-COMPLS = {
-    "A": "T", "T": "A", "C": "G", "G": "C",
-    "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
-    "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
-}
+COMPLS = {"A": "T", "T": "A", "C": "G", "G": "C",
+          "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
+          "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"}
 
-CBCOLS = (
-    ("All", "all"), ("Palindrome", "pal"),
-    ("Asymmetric", "npl"), ("Coinside", "sam"),
-    ("Differ", "dif"), ("Incomplete", "inc")
-)
-CBROWS = (
-    ("Total", "tot"), None,
-    ("NaN", "nan"), ("Low", "low"), ("Good", "rel"), None,
-    ("<1", "les"), ("1", "one"), (">1", "mor"), None,
-    ("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove")
-)
-JGCOLS = (
-    ("NaN", "nan"), ("Low", "low"), ("0", "zer"), ("Under", "und"),
-    ("<1", "les"), ("1", "one"), (">1", "mor"), ("Over", "ove")
-)
+CBCOLS = (("All", "all"), ("Palindrome", "pal"),
+          ("Asymmetric", "npl"), ("Coinside", "sam"),
+          ("Differ", "dif"), ("Incomplete", "inc"))
+
+CBROWS = (("Total", "tot"), None,
+          ("NaN", "nan"), ("Low", "low"), ("Good", "rel"), None,
+          ("<1", "les"), ("1", "one"), (">1", "mor"), None,
+          ("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove"))
+
+JGCOLS = (("NaN", "nan"), ("Low", "low"), ("0", "zer"), ("Under", "und"),
+          ("<1", "les"), ("1", "one"), (">1", "mor"), ("Over", "ove"))
+
 JGROWS = JGCOLS + (None, ("Total", "tot"))
 
 HTML_SEED = """\
@@ -60,6 +55,9 @@ HTML_SEED = """\
   </body>
 </html>
 """
+
+TITLE_STUBS = {"raw": "\n\t{}:\n\n", "tsv": "#\n#{}\n",
+               "md": "##{}##\n\n", "html": "##{}##\n\n"}
 
 def make_tsv_table_stub(columns, rows, spacer="_",
                         lab_width=None, cell_width=None):
@@ -113,6 +111,9 @@ def make_raw_table_stub(columns, rows, spacer="_",
             table.append(empty)
     return "".join(table)
 
+TABLE_MAKERS = {"raw": make_raw_table_stub, "tsv": make_tsv_table_stub,
+               "md": make_md_table_stub, "html": make_md_table_stub}
+
 def compress(num, width=4, suffix=" "):
     rank = 0
     while num >= 1000:
@@ -146,13 +147,9 @@ def formatter(count, total, skip_zeros=False,
 class FormatManager(object):
     def __init__(self, out_format, cbsection="both", jgsection="both",
                  shorten_vals=True):
-        stub_maker = make_raw_table_stub
-        title_stub = "\n\n\t{}:\n"
-        self.shorten_vals = True
-        if out_format != "raw":
-            stub_maker = make_md_table_stub
-            title_stub = "##{}##\n\n"
-            self.shorten_vals = shorten_vals
+        title_stub = TITLE_STUBS[out_format]
+        stub_maker = TABLE_MAKERS[out_format]
+        self.shorten_vals = shorten_vals or out_format == "raw"
         if jgsection == "both" and self.shorten_vals:
             jgsection = "counts"
         self.jgsection = jgsection
