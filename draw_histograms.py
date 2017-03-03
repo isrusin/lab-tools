@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-"""Draw histograms obtained by make_histogram.py on the same plot."""
+"""Draw histograms obtained by make_histogram on a single plot."""
 
 import argparse
 import matplotlib.pyplot as plt
@@ -8,6 +8,7 @@ import sys
 from os.path import basename, splitext
 
 def load_hst(inhst):
+    """Load histogram from .hst file"""
     xvals = []
     yvals = []
     for line in inhst:
@@ -18,7 +19,7 @@ def load_hst(inhst):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Draw histrograms obtained by make_histrogram.py."
+        description="Draw histrograms obtained by make_histrogram."
     )
     parser.add_argument(
         "inhst", metavar="HIST", type=argparse.FileType("r"), nargs="+",
@@ -37,6 +38,8 @@ def main(argv=None):
         names.append(splitext(basename(inhst.name))[0])
         with inhst:
             hists.append(load_hst(inhst))
+    max_val = max(max(yvals) for _xvals, yvals in hists)
+    max_val += 5 - max_val % 5
     fig = plt.figure(1, (5, 3.5), 300)
     fig.subplots_adjust(left=0.085, bottom=0.11, right=0.98, top=0.975)
     color_iter = iter(colors)
@@ -57,6 +60,7 @@ def main(argv=None):
     ax.grid()
     ax.legend()
     plt.xlim(0, 2)
+    plt.ylim(0, min(max_val, 99)) # 100%-label dislocates the y-axis label
     plt.savefig(args.oupic, dpi=150)
 
 if __name__ == "__main__":
