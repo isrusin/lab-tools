@@ -55,7 +55,7 @@ HTML_SEED = """\
 </html>
 """
 
-TITLE_STUBS = {"raw": "\n\t{}:\n\n", "tsv": "#\n#{}\n",
+TITLE_STUBS = {"raw": "\n\t{}:\n\n", "tsv": "##\n##{}\n",
                "md": "##{}##\n\n", "html": "\n    <h2>{}</h2>\n"}
 
 def make_raw_table_stub(columns, rows, spacer="_",
