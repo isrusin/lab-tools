@@ -34,6 +34,10 @@ def main(argv=None):
         "-Y", "--ylim-max", metavar="N", type=float,
         help="y-axis upper limit; default is calculated from the inputs"
     )
+    parser.add_argument(
+        "--dpi", metavar="N", type=int, default=100,
+        help="DPI of the output picture; default is 100"
+    )
     args = parser.parse_args(argv)
     colors = ["#ff0000", "#00bb33", "#0033bb",
               "#ffbb33", "#ff33bb", "0.5", "0.1"]
@@ -68,7 +72,7 @@ def main(argv=None):
     ax.legend()
     plt.xlim(0, 2)
     plt.ylim(0, min(max_val, 99)) # '100%' dislocates the y-axis label
-    plt.savefig(args.oupic, dpi=150)
+    plt.savefig(args.oupic, dpi=args.dpi)
 
 if __name__ == "__main__":
     sys.exit(main())
