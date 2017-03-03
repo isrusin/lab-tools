@@ -27,7 +27,12 @@ def main(argv=None):
     )
     parser.add_argument(
         "-o", "--out", dest="oupic", metavar="FILE", default="hists.png",
-        help="output figure file, the type is parsed from the extension"
+        help="""output figure file, the type is parsed from the extension;
+        default is 'hists.png'"""
+    )
+    parser.add_argument(
+        "-Y", "--ylim-max", metavar="N", type=float,
+        help="y-axis upper limit; default is calculated from the inputs"
     )
     args = parser.parse_args(argv)
     colors = ["#ff0000", "#00bb33", "#0033bb",
@@ -38,8 +43,10 @@ def main(argv=None):
         names.append(splitext(basename(inhst.name))[0])
         with inhst:
             hists.append(load_hst(inhst))
-    max_val = max(max(yvals) for _xvals, yvals in hists)
-    max_val += 5 - max_val % 5
+    max_val = args.ylim_max
+    if max_val is None:
+        max_val = max(max(yvals) for _xvals, yvals in hists)
+        max_val += 5 - max_val % 5
     fig = plt.figure(1, (5, 3.5), 300)
     fig.subplots_adjust(left=0.085, bottom=0.11, right=0.98, top=0.975)
     color_iter = iter(colors)
@@ -60,7 +67,7 @@ def main(argv=None):
     ax.grid()
     ax.legend()
     plt.xlim(0, 2)
-    plt.ylim(0, min(max_val, 99)) # 100%-label dislocates the y-axis label
+    plt.ylim(0, min(max_val, 99)) # '100%' dislocates the y-axis label
     plt.savefig(args.oupic, dpi=150)
 
 if __name__ == "__main__":
