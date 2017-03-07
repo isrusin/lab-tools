@@ -406,7 +406,19 @@ def main(argv=None):
         "--no-id", action="store_true", help="""input table has no ID
         column, shift default column indices"""
     )
+    struct_group = parser.add_argument_group("output structure arguments")
+    struct_group.add_argument(
+        "--cb-stat", choices=["ss", "ds", "both", "none"], default="both",
+        help="""which compositional bias statistics to provide:
+        ss (single-stranded), ds (double-stranded), or both (default)"""
+    )
+    struct_group.add_argument(
+        "--jg-stat", choices=["counts", "percents", "both", "none"],
+        default="both", help="""which joint-group statistics to provide:
+        counts, percents, both (default, counts in case of raw output)"""
+    )
     args = parser.parse_args(argv)
+    # indices
     no_id = int(args.no_id)
     apply_default = lambda x, default: default if x is None else x
     id_index = apply_default(args.id_index, None if no_id else 0)
@@ -414,18 +426,31 @@ def main(argv=None):
     obs_index = apply_default(args.obs_index, 2-no_id)
     exp_index = apply_default(args.exp_index, -3)
     indices = (id_index, site_index, obs_index, exp_index)
+    # cutoffs
     cutoffs = (
         args.exp_cutoff, args.zero_cutoff,
         args.under_cutoff, args.over_cutoff
     )
     line_parser = LineParser(indices, cutoffs)
+    # output format
     out_format = args.format
     if not out_format:
         out_format = "raw"
         out_ext = splitext(args.out.name)[-1]
         if out_ext in [".md", ".tsv", ".html"]:
             out_format = out_ext[1:]
-    format_manager = FormatManager(out_format, shorten_vals=args.shorten)
+    # output sections
+    cb_stat = args.cb_stat
+    if cb_stat == "none":
+        cb_stat = None
+    jg_stat = args.jg_stat
+    if jg_stat == "none":
+        jg_stat = None
+    format_manager = FormatManager(
+        out_format, shorten_vals=args.shorten,
+        cbsection=cb_stat, jgsection=jg_stat
+    )
+    # collect stats
     cbstat_ss, cbstat_ds, jgstat = collect_stat(args.intsv, line_parser)
     cbvals = summarize_cbstat(cbstat_ss)
     cbvals.update(summarize_cbstat(cbstat_ds, spacer="2"))
