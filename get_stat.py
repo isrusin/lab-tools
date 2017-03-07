@@ -17,14 +17,25 @@ COMPLS = {"A": "T", "T": "A", "C": "G", "G": "C",
           "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
           "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"}
 
-CBCOLS = (("All", "all"), ("Palindrome", "pal"),
-          ("Asymmetric", "npl"), ("Coinside", "sam"),
-          ("Differ", "dif"), ("Incomplete", "inc"))
+CBCOLS = {
+    "A": ("All", "all"), "P": ("Palindrome", "pal"),
+    "N": ("Asymmetric", "npl"), "C": ("Coinside", "sam"),
+    "D": ("Differ", "dif"), "I": ("Incomplete", "inc")
+}
 
-CBROWS = (("Total", "tot"), None,
-          ("NaN", "nan"), ("Low", "low"), ("Good", "rel"), None,
-          ("<1", "les"), ("1", "one"), (">1", "mor"), None,
-          ("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove"))
+CBROWS = {
+    "T": [("Total", "tot")],
+    "R": [("NaN", "nan"), ("Low", "low"), ("Good", "rel")],
+    "O": [("<1", "les"), ("1", "one"), (">1", "mor")],
+    "N": [("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove")]
+}
+
+def get_rows_by_abbrs(abbrs):
+    rows = []
+    for abbr in abbrs:
+        rows.extend(CBROWS[abbr])
+        rows.append(None)
+    return rows[:-1]
 
 JGCOLS = (("NaN", "nan"), ("Low", "low"), ("0", "zer"), ("Under", "und"),
           ("<1", "les"), ("1", "one"), (">1", "mor"), ("Over", "ove"))
@@ -156,15 +167,21 @@ def formatter(count, total, skip_zeros=False,
 
 class FormatManager(object):
     def __init__(self, out_format, cbsection="both", jgsection="both",
-                 shorten_vals=True):
+                 cbcols="PSD", cbrows="TRON", shorten_vals=True):
         title_stub = TITLE_STUBS[out_format]
         stub_maker = TABLE_MAKERS[out_format]
         self.shorten_vals = shorten_vals or out_format == "raw"
         if jgsection == "both" and self.shorten_vals:
             jgsection = "counts"
         self.jgsection = jgsection
-        cbstat_ss_stub = stub_maker(CBCOLS, CBROWS)
-        cbstat_ds_stub = stub_maker(CBCOLS[:-1], CBROWS, spacer="2")
+        cbrows = get_rows_by_abbrs(cbrows)
+        cbstat_ss_stub = stub_maker(
+            [CBCOLS[abbr] for abbr in cbcols], cbrows
+        )
+        cbstat_ds_stub = stub_maker(
+            [CBCOLS[abbr] for abbr in cbcols if abbr != "I"],
+            cbrows, spacer="2"
+        )
         jgstat_stub = stub_maker(JGCOLS, JGROWS, cell_width=7)
         output_stub = ""
         if cbsection:
@@ -227,7 +244,7 @@ class LineParser(object):
 
     def __call__(self, line):
         vals = line.strip().split("\t")
-        sid = vals[self.id_index]
+        sid = None if self.id_index is None else vals[self.id_index]
         site = vals[self.site_index]
         rsite = "".join(COMPLS.get(nucl, "?") for nucl in site[::-1])
         site_ds = (site, rsite) if site < rsite else (rsite, site)
@@ -387,37 +404,83 @@ def main(argv=None):
         (-1 for the last column)."""
     )
     index_group.add_argument(
-        "-S", "--site-index", metavar="N", type=int, default=1,
-        help="site column index, default 1"
-    )
-    index_group.add_argument(
-        "-I", "--id-index", metavar="N", type=int, default=0,
+        "-I", "--id-index", metavar="N", type=int,
         help="sequence ID column index, default 0"
     )
     index_group.add_argument(
-        "-E", "--exp-index", metavar="N", type=int, default=-3,
+        "-S", "--site-index", metavar="N", type=int,
+        help="site column index, default 1"
+    )
+    index_group.add_argument(
+        "-E", "--exp-index", metavar="N", type=int,
         help="expected number column index, default -3"
     )
     index_group.add_argument(
-        "-O", "--obs-index", metavar="N", type=int, default=2,
+        "-O", "--obs-index", metavar="N", type=int,
         help="observed number column index, default 2"
     )
-    args = parser.parse_args(argv)
-    indices = (
-        args.id_index, args.site_index, args.obs_index, args.exp_index
+    index_group.add_argument(
+        "--no-id", action="store_true", help="""input table has no ID
+        column, shift default column indices"""
     )
+    struct_group = parser.add_argument_group("output structure arguments")
+    struct_group.add_argument(
+        "--cb-stat", choices=["ss", "ds", "both", "none"], default="both",
+        help="""which compositional bias statistics to provide:
+        ss (single-stranded), ds (double-stranded), or both (default)"""
+    )
+    struct_group.add_argument(
+        "--jg-stat", choices=["counts", "percents", "both", "none"],
+        default="both", help="""which joint-group statistics to provide:
+        counts, percents, both (default, counts in case of raw output)"""
+    )
+    struct_group.add_argument(
+        "--cols", "--columns", dest="cbcols", metavar="ABBRS",
+        default="APNCDI", help="""columns of CBstat table: A - all,
+        P - palindromes, N - assymetric, C - coinside, D - differ,
+        I - incomplete (only is 'ss' mode); default is APNCDI"""
+    )
+    struct_group.add_argument(
+        "--rows", dest="cbrows", metavar="ABBRS", default="TRON",
+        help="""row groups of CBstat table: T - total, R - reliability
+        group, O - 'compare with 1' group, N - normal (zero, under, normal,
+        over) group; default is TRON"""
+    )
+    args = parser.parse_args(argv)
+    # indices
+    no_id = int(args.no_id)
+    apply_default = lambda x, default: default if x is None else x
+    id_index = apply_default(args.id_index, None if no_id else 0)
+    site_index = apply_default(args.site_index, 1-no_id)
+    obs_index = apply_default(args.obs_index, 2-no_id)
+    exp_index = apply_default(args.exp_index, -3)
+    indices = (id_index, site_index, obs_index, exp_index)
+    # cutoffs
     cutoffs = (
         args.exp_cutoff, args.zero_cutoff,
         args.under_cutoff, args.over_cutoff
     )
     line_parser = LineParser(indices, cutoffs)
+    # output format
     out_format = args.format
     if not out_format:
         out_format = "raw"
         out_ext = splitext(args.out.name)[-1]
         if out_ext in [".md", ".tsv", ".html"]:
             out_format = out_ext[1:]
-    format_manager = FormatManager(out_format, shorten_vals=args.shorten)
+    # output sections
+    cbsection = args.cb_stat
+    if cbsection == "none":
+        cbsection = None
+    jgsection = args.jg_stat
+    if jgsection == "none":
+        jgsection = None
+    format_manager = FormatManager(
+        out_format, shorten_vals=args.shorten,
+        cbsection=cbsection, jgsection=jgsection,
+        cbcols=args.cbcols, cbrows=args.cbrows
+    )
+    # collect stats
     cbstat_ss, cbstat_ds, jgstat = collect_stat(args.intsv, line_parser)
     cbvals = summarize_cbstat(cbstat_ss)
     cbvals.update(summarize_cbstat(cbstat_ds, spacer="2"))
