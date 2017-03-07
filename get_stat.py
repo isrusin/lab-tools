@@ -440,15 +440,15 @@ def main(argv=None):
         if out_ext in [".md", ".tsv", ".html"]:
             out_format = out_ext[1:]
     # output sections
-    cb_stat = args.cb_stat
-    if cb_stat == "none":
-        cb_stat = None
-    jg_stat = args.jg_stat
-    if jg_stat == "none":
-        jg_stat = None
+    cbsection = args.cb_stat
+    if cbsection == "none":
+        cbsection = None
+    jgsection = args.jg_stat
+    if jgsection == "none":
+        jgsection = None
     format_manager = FormatManager(
         out_format, shorten_vals=args.shorten,
-        cbsection=cb_stat, jgsection=jg_stat
+        cbsection=cbsection, jgsection=jgsection
     )
     # collect stats
     cbstat_ss, cbstat_ds, jgstat = collect_stat(args.intsv, line_parser)
