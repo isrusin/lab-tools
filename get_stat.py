@@ -227,7 +227,7 @@ class LineParser(object):
 
     def __call__(self, line):
         vals = line.strip().split("\t")
-        sid = vals[self.id_index]
+        sid = None if self.id_index is None else vals[self.id_index]
         site = vals[self.site_index]
         rsite = "".join(COMPLS.get(nucl, "?") for nucl in site[::-1])
         site_ds = (site, rsite) if site < rsite else (rsite, site)
@@ -387,25 +387,33 @@ def main(argv=None):
         (-1 for the last column)."""
     )
     index_group.add_argument(
-        "-S", "--site-index", metavar="N", type=int, default=1,
-        help="site column index, default 1"
-    )
-    index_group.add_argument(
-        "-I", "--id-index", metavar="N", type=int, default=0,
+        "-I", "--id-index", metavar="N", type=int,
         help="sequence ID column index, default 0"
     )
     index_group.add_argument(
-        "-E", "--exp-index", metavar="N", type=int, default=-3,
+        "-S", "--site-index", metavar="N", type=int,
+        help="site column index, default 1"
+    )
+    index_group.add_argument(
+        "-E", "--exp-index", metavar="N", type=int,
         help="expected number column index, default -3"
     )
     index_group.add_argument(
-        "-O", "--obs-index", metavar="N", type=int, default=2,
+        "-O", "--obs-index", metavar="N", type=int,
         help="observed number column index, default 2"
     )
-    args = parser.parse_args(argv)
-    indices = (
-        args.id_index, args.site_index, args.obs_index, args.exp_index
+    index_group.add_argument(
+        "--no-id", action="store_true", help="""input table has no ID
+        column, shift default column indices"""
     )
+    args = parser.parse_args(argv)
+    no_id = int(args.no_id)
+    apply_default = lambda x, default: default if x is None else x
+    id_index = apply_default(args.id_index, None if no_id else 0)
+    site_index = apply_default(args.site_index, 1-no_id)
+    obs_index = apply_default(args.obs_index, 2-no_id)
+    exp_index = apply_default(args.exp_index, -3)
+    indices = (id_index, site_index, obs_index, exp_index)
     cutoffs = (
         args.exp_cutoff, args.zero_cutoff,
         args.under_cutoff, args.over_cutoff
