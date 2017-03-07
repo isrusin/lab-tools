@@ -17,14 +17,25 @@ COMPLS = {"A": "T", "T": "A", "C": "G", "G": "C",
           "B": "V", "V": "B", "D": "H", "H": "D", "N": "N",
           "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"}
 
-CBCOLS = (("All", "all"), ("Palindrome", "pal"),
-          ("Asymmetric", "npl"), ("Coinside", "sam"),
-          ("Differ", "dif"), ("Incomplete", "inc"))
+CBCOLS = {
+    "A": ("All", "all"), "P": ("Palindrome", "pal"),
+    "N": ("Asymmetric", "npl"), "C": ("Coinside", "sam"),
+    "D": ("Differ", "dif"), "I": ("Incomplete", "inc")
+}
 
-CBROWS = (("Total", "tot"), None,
-          ("NaN", "nan"), ("Low", "low"), ("Good", "rel"), None,
-          ("<1", "les"), ("1", "one"), (">1", "mor"), None,
-          ("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove"))
+CBROWS = {
+    "T": [("Total", "tot")],
+    "R": [("NaN", "nan"), ("Low", "low"), ("Good", "rel")],
+    "O": [("<1", "les"), ("1", "one"), (">1", "mor")],
+    "N": [("0", "zer"), ("Under", "und"), ("Norm", "nor"),("Over", "ove")]
+}
+
+def get_rows_by_abbrs(abbrs):
+    rows = []
+    for abbr in abbrs:
+        rows.extend(CBROWS[abbr])
+        rows.append(None)
+    return rows[:-1]
 
 JGCOLS = (("NaN", "nan"), ("Low", "low"), ("0", "zer"), ("Under", "und"),
           ("<1", "les"), ("1", "one"), (">1", "mor"), ("Over", "ove"))
@@ -156,15 +167,21 @@ def formatter(count, total, skip_zeros=False,
 
 class FormatManager(object):
     def __init__(self, out_format, cbsection="both", jgsection="both",
-                 shorten_vals=True):
+                 cbcols="PSD", cbrows="TRON", shorten_vals=True):
         title_stub = TITLE_STUBS[out_format]
         stub_maker = TABLE_MAKERS[out_format]
         self.shorten_vals = shorten_vals or out_format == "raw"
         if jgsection == "both" and self.shorten_vals:
             jgsection = "counts"
         self.jgsection = jgsection
-        cbstat_ss_stub = stub_maker(CBCOLS, CBROWS)
-        cbstat_ds_stub = stub_maker(CBCOLS[:-1], CBROWS, spacer="2")
+        cbrows = get_rows_by_abbrs(cbrows)
+        cbstat_ss_stub = stub_maker(
+            [CBCOLS[abbr] for abbr in cbcols], cbrows
+        )
+        cbstat_ds_stub = stub_maker(
+            [CBCOLS[abbr] for abbr in cbcols if abbr != "I"],
+            cbrows, spacer="2"
+        )
         jgstat_stub = stub_maker(JGCOLS, JGROWS, cell_width=7)
         output_stub = ""
         if cbsection:
@@ -417,6 +434,18 @@ def main(argv=None):
         default="both", help="""which joint-group statistics to provide:
         counts, percents, both (default, counts in case of raw output)"""
     )
+    struct_group.add_argument(
+        "--cols", "--columns", dest="cbcols", metavar="ABBRS",
+        default="APNCDI", help="""columns of CBstat table: A - all,
+        P - palindromes, N - assymetric, C - coinside, D - differ,
+        I - incomplete (only is 'ss' mode); default is APNCDI"""
+    )
+    struct_group.add_argument(
+        "--rows", dest="cbrows", metavar="ABBRS", default="TRON",
+        help="""row groups of CBstat table: T - total, R - reliability
+        group, O - 'compare with 1' group, N - normal (zero, under, normal,
+        over) group; default is TRON"""
+    )
     args = parser.parse_args(argv)
     # indices
     no_id = int(args.no_id)
@@ -448,7 +477,8 @@ def main(argv=None):
         jgsection = None
     format_manager = FormatManager(
         out_format, shorten_vals=args.shorten,
-        cbsection=cbsection, jgsection=jgsection
+        cbsection=cbsection, jgsection=jgsection,
+        cbcols=args.cbcols, cbrows=args.cbrows
     )
     # collect stats
     cbstat_ss, cbstat_ds, jgstat = collect_stat(args.intsv, line_parser)
