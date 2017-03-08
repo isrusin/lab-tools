@@ -2,8 +2,8 @@
 
 """Sieve a TSV file.
 
-Filter a tab-separated text (TSV) file by a certain column and a list
-of values of the column to keep (or to skip, -r/--reverse option).
+Filter a TSV file by a certain column and a list of values
+of the column to keep (or to skip, -r/--reverse option).
 """
 
 import argparse
