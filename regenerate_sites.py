@@ -6,6 +6,7 @@ import argparse
 import signal
 import sys
 
+
 NUCLS = {
     "N": ["A", "C", "G", "T"],
     "A": ["A"], "B": ["C", "G", "T"],
@@ -16,6 +17,7 @@ NUCLS = {
     "R": ["A", "G"], "Y": ["C", "T"],
     "W": ["A", "T"], "S": ["C", "G"]
 }
+
 
 def regenerate(dsite):
     """Get non-degenerate version of the site."""
@@ -28,13 +30,15 @@ def regenerate(dsite):
         regenerated = elongated
     return regenerated
 
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Make list of non-degenerate variants of given sites."
     )
     parser.add_argument(
         "instl", metavar="FILE", type=argparse.FileType("r"),
-        default=sys.stdin, help="input .stl file, use '-' for STDIN"
+        default=sys.stdin, help="""whitespace-separated list of sites,
+        use '-' for STDIN"""
     )
     parser.add_argument(
         "-o", metavar="FILE", dest="oustl", type=argparse.FileType("w"),
@@ -42,7 +46,7 @@ def main(argv=None):
     )
     parser.add_argument(
         "-k", "--keep", dest="keep", action="store_true",
-        help="keep degenerate sites in the list, default replacement"
+        help="keep degenerate sites in the list, default is replacement"
     )
     args = parser.parse_args(argv)
     with args.instl as instl:
@@ -53,10 +57,13 @@ def main(argv=None):
     if args.keep:
         sites.update(dsites)
     with args.oustl as oustl:
-        if oustl.name == "<stdout>":
-            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         oustl.write("\n".join(sorted(sites)) + "\n")
 
+
 if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
     sys.exit(main())
 
