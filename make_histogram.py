@@ -1,34 +1,38 @@
 #! /usr/bin/env python
 
-"""Make a histrogram of contrast ratio values."""
+"""Make a histrogram of compositional bias values."""
 
 import argparse
 import math
 import sys
 
-cmpls = {
+
+COMPLS = {
     "A": "T", "B": "V", "T": "A", "V": "B", "W": "W",
     "C": "G", "D": "H", "G": "C", "H": "D", "S": "S",
     "K": "M", "M": "K", "R": "Y", "Y": "R", "N": "N"
 }
 
-def ds(site):
+
+def get_watson(site):
     compl = ""
     for nucl in site:
-        compl = cmpls[nucl] + compl
+        compl = COMPLS[nucl] + compl
     return min([site, compl])
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Make histrogram of contrast ratio values."
+        description="Make histrogram of compositional bias values."
     )
     parser.add_argument(
         "intab", metavar="IN.tsv", type=argparse.FileType("r"),
-        help="input tabular file with contrast ratio values"
+        help="""input TSV file with compositional bias values, use '-'
+        for STDIN"""
     )
     parser.add_argument(
-        "ouhst", metavar="OU.hst", type=argparse.FileType("w"),
-        help="output histogram file"
+        "ouhst", metavar="OUT.hst", type=argparse.FileType("w"),
+        help="output file"
     )
     parser.add_argument(
         "--bins", dest="bins_number", type=int, default=41,
@@ -57,7 +61,7 @@ def main(argv=None):
         for line in intab:
             vals = line.strip().split("\t")
             acv = vals[0]
-            site = ds(vals[1])
+            site = get_watson(vals[1])
             pair = (acv, site)
             expected = float(vals[exp_index])
             observed = float(vals[obs_index])
@@ -83,6 +87,7 @@ def main(argv=None):
     with args.ouhst as ouhst:
         for label, value in zip(labs, hist):
             ouhst.write("%s\t%.2f\n" % (label, value * 100.0 / total))
+
 
 if __name__ == "__main__":
     sys.exit(main())
