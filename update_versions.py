@@ -1,12 +1,13 @@
 #! /usr/bin/env python
 
-"""Add or update AC versions in a TSV (or LIST) file by AC version list."""
+"""Add or update AC versions in a TSV (or LIST) file."""
 
 import argparse
 import signal
 import sys
 
-def main(argv):
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Add/update AC version.")
     parser.add_argument(
         "infile", metavar="FILE", type=argparse.FileType("r"),
@@ -27,7 +28,7 @@ def main(argv):
     parser.add_argument(
         "-d", "--delimiter", dest="delimiter", metavar="STRING",
         nargs="?", const=",", help="""switch to 'delimited' mode and
-        set up the delimiter, default is coma (-d without value)"""
+        set up the delimiter, default is comma (-d without value)"""
     )
     ougroup = parser.add_mutually_exclusive_group()
     ougroup.add_argument(
@@ -64,11 +65,14 @@ def main(argv):
                 vals[index] = ac2acv.get(ac, "")
             lines.append("\t".join(vals))
     oufile = open(infile.name, "w") if args.inplace else args.oufile
-    if oufile.name == "<stdout>":
-        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     with oufile:
         oufile.write("\n".join(lines) + "\n")
 
+
 if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
     sys.exit(main())
 
