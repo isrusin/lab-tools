@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#! /usr/bin/env python
 
 """Replace IDs by dictionary."""
 
 import argparse
 import signal
 import sys
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
@@ -39,7 +40,7 @@ def main(argv=None):
     parser.add_argument(
         "-d", "--delimiter", dest="delimiter", metavar="STRING",
         nargs="?", default=",", help="""set up the delimiter for
-        multiple-entry values, default is coma; -d with no value means
+        multiple-entry values, default is comma; -d with no value means
         not to split values"""
     )
     parser.add_argument(
@@ -58,7 +59,7 @@ def main(argv=None):
         with; -m without value forces to keep missed IDs in place;
         default behaviour (without -m) is to remove all missed IDs"""
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     idict = dict()
     with args.indct as indct:
         for line in indct:
@@ -76,8 +77,6 @@ def main(argv=None):
     if missed is None:
         replace = lambda x: idict.get(x, x)
     with args.infile as infile, args.oufile as oufile:
-        if oufile.name == "<stdout>":
-            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         if args.title:
             oufile.write(infile.readline())
         for line in infile:
@@ -91,6 +90,11 @@ def main(argv=None):
             if vals[index] or keep_empty:
                 oufile.write("\t".join(vals) + "\n")
 
+
 if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
     sys.exit(main())
 
