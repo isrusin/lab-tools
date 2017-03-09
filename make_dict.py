@@ -6,13 +6,14 @@ import argparse
 import signal
 import sys
 
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Transform TSV with delimited column into .dct file."
     )
     parser.add_argument(
         "intsv", metavar="FILE", type=argparse.FileType("r"),
-        help="input .tsv file"
+        help="input TSV file"
     )
     parser.add_argument(
         "-t", "--title", dest="title", action="store_true",
@@ -58,11 +59,14 @@ def main(argv=None):
                         sys.stderr.write("identical values.\n")
                 result[key] = value
     with args.oudct as oudct:
-        if oudct.name == "<stdout>":
-            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         for item in sorted(result.items()):
             oudct.write("%s\t%s\n" % item)
 
+
 if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
     sys.exit(main())
 
