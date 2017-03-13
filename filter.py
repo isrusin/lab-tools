@@ -1,11 +1,14 @@
-#!/usr/bin/python
+#! /usr/bin/env python
 
-import argparse as ap
+import argparse
+import signal
 import sys
+
 
 _FILTER_NONE = 0
 _FILTER_DIRECT = 1
 _FILTER_REVERSE = 2
+
 
 def load_prs(prs_file):
     prs = set()
@@ -14,9 +17,11 @@ def load_prs(prs_file):
             prs.add(tuple(line.strip().split("\t")))
     return prs
 
+
 def load_set(set_file):
     with set_file:
         return set(set_file.read().strip().split("\n"))
+
 
 def load_sets(set_file, antiset_file, isprs=False):
     load_func = load_prs if isprs else load_set
@@ -30,6 +35,7 @@ def load_sets(set_file, antiset_file, isprs=False):
     else:
         return _FILTER_NONE, None
 
+
 def filter(value, value_set, filter_mode):
     if filter_mode == _FILTER_DIRECT:
         return value not in value_set
@@ -39,49 +45,49 @@ def filter(value, value_set, filter_mode):
         return False
 
 
-if __name__ == "__main__":
-    parser = ap.ArgumentParser(
-            description="Filter .prs (default) or .tsv (-t option) file " +
-            "by set(s) of SIDs, sites or pairs."
-            )
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="""Filter .prs (default) or .tsv (-t option) file
+        by set(s) of SIDs, sites or pairs."""
+    )
     parser.add_argument(
-            "infile", metavar="FILE", type=ap.FileType("r"),
-            help="input .prs (default) or .tsv file"
-            )
+        "infile", metavar="FILE", type=argparse.FileType("r"),
+        help="input .prs (default) or .tsv file"
+    )
     parser.add_argument(
-            "-t", "--title", dest="title", action="store_true",
-            help="treat input file as .tsv (with title line)"
-            )
+        "-t", "--title", dest="title", action="store_true",
+        help="treat input file as .tsv (with title line)"
+    )
     parser.add_argument(
-            "-a", dest="sids", type=ap.FileType("r"), metavar="SET",
-            help="filter by the SET of sids."
-            )
+        "-a", "--sids", type=argparse.FileType("r"), metavar="SET",
+        help="filter by the SET of sids"
+    )
     parser.add_argument(
-            "-A", dest="nosids", type=ap.FileType("r"), metavar="SET",
-            help="filter by the reversed SET of sids."
-            )
+        "-A", "--nosids", type=argparse.FileType("r"), metavar="SET",
+        help="filter by the reversed SET of sids"
+    )
     parser.add_argument(
-            "-s", dest="sites", type=ap.FileType("r"), metavar="SET",
-            help="filter by the SET of sites."
-            )
+        "-s", "--sites", type=argparse.FileType("r"), metavar="SET",
+        help="filter by the SET of sites"
+    )
     parser.add_argument(
-            "-S", dest="nosites", type=ap.FileType("r"), metavar="SET",
-            help="filter by the reversed SET of sites."
-            )
+        "-S", "--nosites", type=argparse.FileType("r"), metavar="SET",
+        help="filter by the reversed SET of sites"
+    )
     parser.add_argument(
-            "-p", dest="pairs", type=ap.FileType("r"), metavar="SET",
-            help="filter by the SET of pairs."
-            )
+        "-p", "--pairs", type=argparse.FileType("r"), metavar="SET",
+        help="filter by the SET of pairs"
+    )
     parser.add_argument(
-            "-P", dest="nopairs", type=ap.FileType("r"), metavar="SET",
-            help="filter by the reversed SET of pairs."
-            )
+        "-P", "--nopairs", type=argparse.FileType("r"), metavar="SET",
+        help="filter by the reversed SET of pairs"
+    )
     parser.add_argument(
-            "-o", "--out", dest="oufile", metavar="FILE",
-            type=ap.FileType("w"), default=sys.stdout,
-            help="output file, default stdout"
-            )
-    args = parser.parse_args()
+        "-o", "--out", dest="oufile", metavar="FILE",
+        type=argparse.FileType("w"), default=sys.stdout,
+        help="output file, default STDOUT"
+    )
+    args = parser.parse_args(argv)
     sids_mode, sids = load_sets(args.sids, args.nosids)
     sites_mode, sites = load_sets(args.sites, args.nosites)
     pairs_mode, pairs = load_sets(args.pairs, args.nopairs, isprs=True)
@@ -97,4 +103,12 @@ if __name__ == "__main__":
             if filter(pair, pairs, pairs_mode):
                 continue
             oufile.write(line)
+
+
+if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
+    sys.exit(main())
 
