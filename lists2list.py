@@ -1,13 +1,19 @@
-#!/usr/bin/python
+#! /usr/bin/env python
 
-import argparse as ap
+import argparse
+import signal
 import sys
 
-toremove = set()
-def symmetric_difference_update(fset, sset):
-    toremove.update(fset.intersection(sset))
-    fset.symmetric_difference_update(sset)
-    fset.difference_update(toremove)
+
+class SymmetricDifference(object):
+    def __init__(self):
+        self.toremove = set()
+
+    def __call__(self, fset, sset):
+        self.toremove.update(fset.intersection(sset))
+        fset.symmetric_difference_update(sset)
+        fset.difference_update(self.toremove)
+
 
 def read_acvs(inlist, verbose):
     with inlist:
@@ -16,63 +22,69 @@ def read_acvs(inlist, verbose):
             sys.stderr.write("%s: %d\n" % (inlist.name, len(idset)))
         return idset
 
-if __name__ == "__main__":
-    parser = ap.ArgumentParser(
-            description="Get ID-sets and return their union (default), " +
-            "intersection or difference."
-            )
+
+def _verbose_sigpipe_handler(signum, frame):
+    sys.stderr.write("The output set is incomplete!\n")
+    sys.exit(1)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="""Get ID-sets and return their union (default),
+        intersection or difference."""
+    )
     parser.add_argument(
-            "sets", metavar="FILE", type=ap.FileType("r"), nargs="+",
-            help="input ID-set file, one ID per line"
-            )
+        "sets", metavar="FILE", type=argparse.FileType("r"), nargs="+",
+        help="input ID-set file, one ID per line"
+    )
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
-            "-u", dest="action", action="store_const", const="u",
-            help="union (in either list)"
-            )
+        "-u", "--union", dest="action", action="store_const",
+        const=set.update, help="union (in either list)"
+    )
     group.add_argument(
-            "-i", dest="action", action="store_const", const="i",
-            help="intersection (in every list)"
-            )
+        "-i", "--intersection", dest="action", action="store_const",
+        const=set.intersection_update,
+        help="intersection (in every list)"
+    )
     group.add_argument(
-            "-d", dest="action", action="store_const", const="d",
-            help="difference (only in the first list)"
-            )
+        "-d", "--difference", dest="action", action="store_const",
+        const=set.difference_update,
+        help="difference (only in the first list)"
+    )
     group.add_argument(
-            "-s", dest="action", action="store_const", const="s",
-            help="symmetric difference (only in one list)"
-            )
+        "-s", "--symmetric", dest="action", action="store_const",
+        const=SymmetricDifference(),
+        help="symmetric difference (only in one list)"
+    )
     parser.add_argument(
-            "-o", "--output", dest="oulist", metavar="FILE",
-            type=ap.FileType("w"), default=sys.stdout,
-            help="output file, default stdout"
-            )
+        "-o", "--output", dest="oulist", metavar="FILE",
+        type=argparse.FileType("w"), default=sys.stdout,
+        help="output file, default STDOUT"
+    )
     parser.add_argument(
-            "-v", "--verbose", dest="verbose", action="store_true",
-            help="verbose mode, print every set size to stderr"
-            )
-    args = parser.parse_args()
-    action = {
-            "u": set.update,
-            "i": set.intersection_update,
-            "d": set.difference_update,
-            "s": symmetric_difference_update
-            }.get(args.action, set.update)
+        "-v", "--verbose", dest="verbose", action="store_true",
+        help="verbose mode, print every set size to STDERR"
+    )
+    args = parser.parse_args(argv)
+    action = args.action or set.update
     verbose = args.verbose
     stderr = sys.stderr
+    if verbose:
+        signal.signal(signal.SIGPIPE, _verbose_sigpipe_handler)
     current_set = read_acvs(args.sets.pop(0), verbose)
     for next_set in args.sets:
         action(current_set, read_acvs(next_set, verbose))
-    printed = 0
     with args.oulist as oulist:
         if verbose:
             stderr.write("%s: %d\n" % (oulist.name, len(current_set)))
-        for line in sorted(current_set):
-            try:
-                oulist.write(line + "\n")
-                printed += 1
-            except IOError:
-                if verbose:
-                    stderr.write("Printed less than %d IDs!\n" % printed)
-                break
+        oulist.write("\n".join(sorted(current_set) + [""]))
+
+
+if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
+    sys.exit(main())
 
