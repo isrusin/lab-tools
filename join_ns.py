@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 """Join files with compositional biases.
 
@@ -10,11 +10,13 @@ TSV by a list of IDs that will be placed into the first column, with
 additional option to filter inputs by their first column (-s option).
 """
 
-import argparse as ap
+import argparse
+import signal
 import sys
 
-if __name__ == "__main__":
-    parser = ap.ArgumentParser(
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
         description="Join files with contrasts into single .tsv file."
     )
     parser.add_argument(
@@ -22,20 +24,20 @@ if __name__ == "__main__":
         help="path to .ns files, use {} placeholder for ACv (ID)."
     )
     parser.add_argument(
-        "-a", dest="inacv", metavar="IN.acv", type=ap.FileType("r"),
+        "-a", dest="inacv", metavar="IN.acv", type=argparse.FileType("r"),
         default=sys.stdin, help="""input file with a list of ACvs (any ID)
         (.acv); default is STDIN"""
     )
     parser.add_argument(
-        "-s", dest="instl", metavar="IN.stl", type=ap.FileType("r"),
+        "-s", dest="instl", metavar="IN.stl", type=argparse.FileType("r"),
         help="""input file with a list of sites (.stl); default is not
         to filter by sites"""
     )
     parser.add_argument(
-        "-o", dest="outsv", metavar="OUT.tsv", type=ap.FileType("w"),
-        default=sys.stdout, help="output .tsv file, default stdout"
+        "-o", dest="outsv", metavar="OUT.tsv", type=argparse.FileType("w"),
+        default=sys.stdout, help="output .tsv file, default STDOUT"
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     with args.inacv as inacv:
         acvs = set(inacv.read().strip().split())
     all_sites = args.instl is None
@@ -58,4 +60,12 @@ if __name__ == "__main__":
                     site, etc = line.split("\t", 1)
                     if all_sites or site in sites:
                         outsv.write(acv + "\t" + line.strip() + "\n")
+
+
+if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
+    sys.exit(main())
 
