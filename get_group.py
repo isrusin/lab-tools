@@ -16,13 +16,16 @@ COMPLS = {
     "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
 }
 
-ABBRS = {
-    "a": "ALL", "A": "ALLC", "n": "NPL", "N": "NPLC",
+SITE_ABBRS = {
+    "*": "ALL", "a": "ALL", "A": "ALLC", "n": "NPL", "N": "NPLC",
     "p": "PAL", "s": "SYM", "d": "DIF", "i": "INC",
-    "#": "NAN", "~": "LOW", "-": "BAD", "+": "GOOD",
-    "0": "ZERO", "U": "UND", "u": "UNDER",
+}
+
+CB_ABBRS = {
+    "*": "ALL", "#": "NAN", "~": "LOW", "-": "BAD",
+    "+": "GOOD", "0": "ZERO", "U": "UND", "u": "UNDER",
     "<": "LESS", "L": "LNORM", "1": "ONE", "n": "NORM",
-    ">": "MORE", "M": "MNORM", "o": "OVER", "*": "ALL"
+    ">": "MORE", "M": "MNORM", "o": "OVER", "a": "ALL"
 }
 
 SITE_GROUPS = {
@@ -117,7 +120,8 @@ def get_groups(group_desc):
         if "," in desc:
             sg_tag, cbg_tag = desc.upper().split(",")
         else:
-            sg_tag, cbg_tag = [ABBRS[abbr] for abbr in desc]
+            sg_tag = SITE_ABBRS[desc[0]]
+            cbg_tag = CB_ABBRS[desc[1]]
         for site_group in SITE_GROUPS[sg_tag]:
             for cb_group in CB_GROUPS[cbg_tag]:
                 groups.add((site_group, cb_group))
