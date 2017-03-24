@@ -3,9 +3,10 @@
 """Draw histograms obtained by make_histogram on a single plot."""
 
 import argparse
-import matplotlib.pyplot as plt
-import sys
+from matplotlib import pyplot
 from os.path import basename, splitext
+import sys
+
 
 def load_hst(inhst):
     """Load histogram from .hst file"""
@@ -16,6 +17,7 @@ def load_hst(inhst):
         xvals.append(float(xval))
         yvals.append(float(yval))
     return xvals, yvals
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
@@ -51,28 +53,29 @@ def main(argv=None):
     if max_val is None:
         max_val = max(max(yvals) for _xvals, yvals in hists)
         max_val += 5 - max_val % 5
-    fig = plt.figure(1, (5, 3.5), 300)
+    fig = pyplot.figure(1, (5, 3.5), 300)
     fig.subplots_adjust(left=0.085, bottom=0.11, right=0.98, top=0.975)
     color_iter = iter(colors)
-    plt.rcParams["font.size"] = 8.0
-    plt.xlabel("Compositional bias value", fontsize=10)
-    plt.ylabel("Site-chromosome pairs, %", fontsize=10)
-    ax = plt.subplot(1, 1, 1)
+    pyplot.rcParams["font.size"] = 8.0
+    pyplot.xlabel("Compositional bias value", fontsize=10)
+    pyplot.ylabel("Site-chromosome pairs, %", fontsize=10)
+    ax = pyplot.subplot(1, 1, 1)
     for name, (xvals, yvals) in zip(names, hists):
         params = {"lw": 1.0, "label": name, "dash_capstyle": "round"}
         try:
             params["color"] = color_iter.next()
         except StopIteration:
             pass
-        plt.plot(xvals, yvals, **params)
+        pyplot.plot(xvals, yvals, **params)
     ticks = [0.2 * i  for i in range(11)]
     labs = ["%.1f" % tick for tick in ticks]
-    plt.xticks(ticks, labs)
+    pyplot.xticks(ticks, labs)
     ax.grid()
     ax.legend()
-    plt.xlim(0, 2)
-    plt.ylim(0, min(max_val, 99)) # '100%' dislocates the y-axis label
-    plt.savefig(args.oupic, dpi=args.dpi)
+    pyplot.xlim(0, 2)
+    pyplot.ylim(0, min(max_val, 99)) # '100%' dislocates the y-axis label
+    pyplot.savefig(args.oupic, dpi=args.dpi)
+
 
 if __name__ == "__main__":
     sys.exit(main())
