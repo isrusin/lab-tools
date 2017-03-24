@@ -6,6 +6,7 @@ import argparse
 import signal
 import sys
 
+
 _ADD = 0
 _REVERSE = 1
 _WATSON = 2
@@ -18,6 +19,7 @@ COMPLS = {
     "M": "K", "K": "M", "R": "Y", "Y": "R", "W": "W", "S": "S"
 }
 
+
 def get_site_versions(site):
     """Get all versions of double-stranded site."""
     rsite = "".join([COMPLS.get(nucl, "?") for nucl in site[::-1]])
@@ -25,6 +27,7 @@ def get_site_versions(site):
     crick = max(site, rsite)
     ispal = watson == crick
     return site, rsite, watson, crick, ispal
+
 
 def transform_tsv(intsv, action, sort=True, keep_repeats=False,
                   site_index=0, id_index=None, has_title=False):
@@ -59,6 +62,7 @@ def transform_tsv(intsv, action, sort=True, keep_repeats=False,
     if has_title:
         lines.insert(0, title)
     return lines
+
 
 def main(argv=None):
     """Parse arguments and call transform_stl."""
@@ -130,10 +134,13 @@ def main(argv=None):
     if args.inplace and intsv.name != "<stdin>":
         outsv = open(intsv.name, "w")
     with outsv:
-        if outsv.name == "<stdout>":
-            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         outsv.writelines(lines)
 
+
 if __name__ == "__main__":
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass # no signal.SIGPIPE on Windows
     sys.exit(main())
 
