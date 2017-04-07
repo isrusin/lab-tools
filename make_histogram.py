@@ -82,9 +82,15 @@ def main(argv=None):
         hist[bin_index] += 1
     total = sum(hist)
     sys.stderr.write("The histogram was build by %d values.\n" % total)
-    if not total:
-        total = 1
     with args.ouhst as ouhst:
+        ouhst.write("## Compositional bias histogram\n")
+        ouhst.write("## Source: %s\n" % args.intab.name)
+        ouhst.write("## Bins number: (%d+1)\n" % args.bins_number)
+        ouhst.write("## Expected cutoff: %.1f\n" % args.cutoff)
+        ouhst.write("## Total: %d\n" % total)
+        ouhst.write("#Bin\tPercent\n")
+        if not total:
+            total = 1
         for label, value in zip(labs, hist):
             ouhst.write("%s\t%.2f\n" % (label, value * 100.0 / total))
 
