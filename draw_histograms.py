@@ -13,6 +13,8 @@ def load_hst(inhst):
     xvals = []
     yvals = []
     for line in inhst:
+        if line.startswith("#"):
+            continue
         xval, yval = line.strip().split("\t")
         xvals.append(float(xval))
         yvals.append(float(yval))
