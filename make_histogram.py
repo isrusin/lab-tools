@@ -51,7 +51,7 @@ def main(argv=None):
     parser.add_argument(
         "-m", "--ds-mode", choices=["none", "summarize", "justify"],
         default="summarize", help="""how to handle assymetric sites from
-        different starins, possible options are 'none' (handle each site
+        different strands, possible options are 'none' (handle each site
         separately), 'summarize' (sum up expected and observed numbers
         before calculation of the ratio), and 'justify' (like 'none' but
         also consider every palindromic site twice to justify the
