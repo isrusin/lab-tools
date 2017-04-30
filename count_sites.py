@@ -101,20 +101,40 @@ def main(argv=None):
     args = parser.parse_args(argv)
     indices = (args.id_index, args.site_index,
                args.obs_index, args.exp_index)
-    cutoffs = (args.exp_cutoff, args.zero_cutoff, args.under_cutoff)
-    line_parser = LineParser(indices, cutoffs)
-    filter_sids = args.inacv is not None
+    metadata = [
+        "## Excluded/avoided site fractions\n",
+        "##\n",
+        "## --- Source ---\n",
+        "## File name: %s\n" % args.intsv.name,
+        "## Column indices: sid=%d, site=%d, obs=%d, exp=%d\n" % indices,
+        "##\n"
+    ]
     sids = load_list(args.inacv)
-    filter_sites = args.instl is not None
     sites = load_list(args.instl)
+    metadata.extend([
+        "## --- Line filters ---\n",
+        "## Sequence ID filter: %s\n" % args.inacv.name if sids else None,
+        "## Site filter: %s\n" % args.instl.name if sites else None,
+        "##\n"
+    ])
+    cutoffs = (args.exp_cutoff, args.zero_cutoff, args.under_cutoff)
+    metadata.append((
+        "## --- Site groups ---\n"
+        "## Reliable: expected > %.1f\n"
+        "## Excluded: observed <= %d\n"
+        "## Avoided: CB <= %.2f\n"
+        "## Decreased: CB < 1.0\n"
+        "##\n"
+    ) % cutoffs)
+    line_parser = LineParser(indices, cutoffs)
     values = dict()
     with args.intsv as intsv:
         intsv.readline()
         for line in intsv:
             sid, site, is_zero, status = line_parser(line)
-            if filter_sids and sid not in sids:
+            if sids and sid not in sids:
                 continue
-            if filter_sites and site not in sites:
+            if sites and site not in sites:
                 continue
             counts = values.setdefault(sid, Counter())
             counts["total"] += 1
@@ -124,9 +144,12 @@ def main(argv=None):
                 if status == "bad":
                     counts["missed_zeros"] += 1
     with args.outsv as outsv:
+        outsv.writelines(metadata)
         outsv.write(
-            "ID\tTotal\tZeros\tZeros, %\tGood\tGood, %\tGood zeros\t"
-            "Good zeros, %\tUnder\tUnder, %\tLess\tLess, %\n"
+            "#Sequence ID\tTotal\tExcluded\tExcluded, %\t"
+            "Reliable\tReliable, %\tExcluded reliable\t"
+            "Excluded reliable, %\tAvoided\tAvoided, %\t"
+            "Decreased\tDecreased, %\n"
         )
         for sid in sorted(values):
             counts = values[sid]
