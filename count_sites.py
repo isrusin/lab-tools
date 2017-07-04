@@ -111,12 +111,15 @@ def main(argv=None):
     ]
     sids = load_list(args.inacv)
     sites = load_list(args.instl)
-    metadata.extend([
-        "## --- Line filters ---\n",
-        "## Sequence ID filter: %s\n" % args.inacv.name if sids else None,
-        "## Site filter: %s\n" % args.instl.name if sites else None,
+    metadata.append((
+        "## --- Line filters ---\n"
+        "## Sequence ID filter: %s\n"
+        "## Site filter: %s\n"
         "##\n"
-    ])
+    ) % (
+        args.inacv.name if sids else None,
+        args.instl.name if sites else None
+    ))
     cutoffs = (args.exp_cutoff, args.zero_cutoff, args.under_cutoff)
     metadata.append((
         "## --- Site groups ---\n"
