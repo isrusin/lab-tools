@@ -5,6 +5,7 @@
 import argparse
 from collections import Counter
 import math
+from os.path import basename
 import signal
 import sys
 
@@ -52,63 +53,88 @@ def load_list(inlist):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Get numbers of absent and under-represented sites."
+        description="Get numbers of absent and under-represented sites.",
+        add_help=False
     )
-    parser.add_argument(
+    io_group = parser.add_argument_group("Input/output arguments")
+    io_group.add_argument(
         "intsv", metavar="FILE", type=argparse.FileType("r"),
         help="input file with compositional bias values"
     )
-    parser.add_argument(
+    io_group.add_argument(
         "-o", dest="outsv", metavar="FILE", type=argparse.FileType("w"),
         default=sys.stdout, help="output file name"
     )
-    parser.add_argument(
+    io_group.add_argument(
+        "-m", "--group-by", choices=["site", "id"], default="id",
+        help="group by sites or sequence IDs, the second is default"
+    )
+    filter_group = parser.add_argument_group("Filters")
+    filter_group.add_argument(
         "-s", dest="instl", metavar="LIST", type=argparse.FileType("r"),
         help="input list of sites to filter by"
     )
-    parser.add_argument(
+    filter_group.add_argument(
         "-a", dest="inacv", metavar="LIST", type=argparse.FileType("r"),
         help="input list of sequence IDs to filter by"
     )
-    parser.add_argument(
+    cutoff_group = parser.add_argument_group("Cutoffs")
+    cutoff_group.add_argument(
         "-e", "--exp-cutoff", metavar="FLOAT", type=float, default=15.0,
         help="reliable expected number cutoff, default 15"
     )
-    parser.add_argument(
+    cutoff_group.add_argument(
         "-z", "--zero-cutoff", metavar="INT", type=int, default=0,
         help="zero observed number cutoff, default 0"
     )
-    parser.add_argument(
+    cutoff_group.add_argument(
         "-u", "--under-cutoff", metavar="FLOAT", type=float, default=0.78,
         help="under-representation cutoff, default 0.78"
     )
-    parser.add_argument(
+    index_group = parser.add_argument_group("Column indices")
+    index_group.add_argument(
         "-I", "--id-index", metavar="N", type=int, default=0,
         help="site column index, default 0"
     )
-    parser.add_argument(
+    index_group.add_argument(
         "-S", "--site-index", metavar="N", type=int, default=1,
         help="site column index, default 1"
     )
-    parser.add_argument(
+    index_group.add_argument(
         "-O", "--obs-index", metavar="N", type=int, default=2,
         help="observed number column index, default 2"
     )
-    parser.add_argument(
+    index_group.add_argument(
         "-E", "--exp-index", metavar="N", type=int, default=-3,
         help="expected number column index, default -3"
     )
+    parser.add_argument(
+        "-h", "-?", "-help", "--help", action="help",
+        help=argparse.SUPPRESS
+    )
     args = parser.parse_args(argv)
+    group_by_id = args.group_by == "id"
+    metadata = [
+        "##### %s\n"
+        "##\n"
+        "## Count excluded/underrepresented sites, and sites\n"
+        "## with decreased frequencies.\n"
+        "##\n"
+        "## --- Main parameters ---\n"
+        "## Source file name: %s\n"
+        "## Group by: %s\n"
+        "##\n" % (basename(sys.argv[0]), args.intsv.name, args.group_by)
+    ]
     indices = (args.id_index, args.site_index,
                args.obs_index, args.exp_index)
-    metadata = [
-        "## Excluded/avoided site fractions\n",
-        "##\n",
-        "## --- Source ---\n",
-        "## File name: %s\n" % args.intsv.name,
-        "## Column indices: sid=%d, site=%d, obs=%d, exp=%d\n" % indices,
+    metadata.append((
+        "## --- Column indices ---\n"
+        "## Sequence ID: %d\n"
+        "## Site: %d\n"
+        "## Observed: %d\n"
+        "## Expected: %d\n"
         "##\n"
-    ]
+    ) % indices)
     sids = load_list(args.inacv)
     sites = load_list(args.instl)
     metadata.append((
@@ -128,19 +154,25 @@ def main(argv=None):
         "## Avoided: CB <= %.2f\n"
         "## Decreased: CB < 1.0\n"
         "##\n"
+        "#####\n"
     ) % cutoffs)
     line_parser = LineParser(indices, cutoffs)
     values = dict()
+    totals = Counter()
     with args.intsv as intsv:
-        intsv.readline()
         for line in intsv:
+            if line.startswith("#"):
+                if line.startswith("##"):
+                    metadata.append(line)
+                continue
             sid, site, is_zero, status = line_parser(line)
             if sids and sid not in sids:
                 continue
             if sites and site not in sites:
                 continue
-            counts = values.setdefault(sid, Counter())
-            counts["total"] += 1
+            key = sid if group_by_id else site
+            counts = values.setdefault(key, Counter())
+            totals[key] += 1
             counts[status] += 1
             if is_zero:
                 counts["zeros"] += 1
@@ -148,30 +180,28 @@ def main(argv=None):
                     counts["missed_zeros"] += 1
     with args.outsv as outsv:
         outsv.writelines(metadata)
+        outsv.write("#:Sequence ID\t" if group_by_id else "#:Site\t")
         outsv.write(
-            "#Sequence ID\tTotal\tExcluded\tExcluded, %\t"
-            "Reliable\tReliable, %\tExcluded reliable\t"
-            "Excluded reliable, %\tAvoided\tAvoided, %\t"
-            "Decreased\tDecreased, %\n"
+            "Total\tExcluded\tExcluded, %\tReliable\tReliable, %\t"
+            "Excluded reliable\tExcluded reliable, %\t"
+            "Avoided\tAvoided, %\tDecreased\tDecreased, %\n"
         )
-        for sid in sorted(values):
-            counts = values[sid]
-            total = counts["total"]
+        for key in sorted(values):
+            counts = values[key]
+            total = totals[key]
             zeros = counts["zeros"]
             zeros_f = zeros * 100.0 / total
             good = total - counts["bad"]
-            if good == 0:
-                continue
             good_f = good * 100.0 / total
             good_zeros = zeros - counts["missed_zeros"]
-            good_zeros_f = good_zeros * 100.0 / good
+            good_zeros_f = good_zeros * 100.0 / (good or 1)
             unders = counts["under"]
-            unders_f = unders * 100.0 / good
+            unders_f = unders * 100.0 / (good or 1)
             less = unders + counts["less"]
-            less_f = less * 100.0 / good
+            less_f = less * 100.0 / (good or 1)
             line = "%s\t%d" + "\t%d\t%.1f" * 5 + "\n"
             outsv.write(line % (
-                sid, total, zeros, zeros_f, good, good_f, good_zeros,
+                key, total, zeros, zeros_f, good, good_f, good_zeros,
                 good_zeros_f, unders, unders_f, less, less_f
             ))
 
