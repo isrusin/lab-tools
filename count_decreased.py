@@ -5,7 +5,6 @@
 import argparse
 from collections import Counter
 import math
-#from os.path import basename
 import signal
 import sys
 
