@@ -5,7 +5,7 @@
 import argparse
 from collections import Counter
 import math
-from os.path import basename
+#from os.path import basename
 import signal
 import sys
 
@@ -51,6 +51,23 @@ def load_list(inlist):
         return set(inlist.read().strip().split())
 
 
+def normalize_counts(counts, total):
+    zeros = counts["zeros"]
+    zeros_f = zeros * 100.0 / total
+    good = total - counts["bad"]
+    good_f = good * 100.0 / total
+    good_zeros = zeros - counts["missed_zeros"]
+    good_zeros_f = good_zeros * 100.0 / (good or 1)
+    unders = counts["under"]
+    unders_f = unders * 100.0 / (good or 1)
+    less = unders + counts["less"]
+    less_f = less * 100.0 / (good or 1)
+    return (
+        zeros, zeros_f, good, good_f, good_zeros,
+        good_zeros_f, unders, unders_f, less, less_f
+    )
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Get numbers of absent and under-represented sites.",
@@ -68,6 +85,10 @@ def main(argv=None):
     io_group.add_argument(
         "-m", "--group-by", choices=["site", "id"], default="id",
         help="group by sites or sequence IDs, the second is default"
+    )
+    io_group.add_argument(
+        "-c", "--summarize", action="store_true",
+        help="calculate grand total"
     )
     filter_group = parser.add_argument_group("Filters")
     filter_group.add_argument(
@@ -114,6 +135,7 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     group_by_id = args.group_by == "id"
+    summarize = args.summarize
     metadata = [
         "##### %s\n"
         "##\n"
@@ -123,7 +145,8 @@ def main(argv=None):
         "## --- Main parameters ---\n"
         "## Source file name: %s\n"
         "## Group by: %s\n"
-        "##\n" % (basename(sys.argv[0]), args.intsv.name, args.group_by)
+        "## With summary: %s\n"
+        "##\n" % (parser.prog, args.intsv.name, args.group_by, summarize)
     ]
     indices = (args.id_index, args.site_index,
                args.obs_index, args.exp_index)
@@ -186,23 +209,19 @@ def main(argv=None):
             "Excluded reliable\tExcluded reliable, %\t"
             "Avoided\tAvoided, %\tDecreased\tDecreased, %\n"
         )
+        ouline = "%s\t%d" + "\t%d\t%.1f" * 5 + "\n"
         for key in sorted(values):
-            counts = values[key]
             total = totals[key]
-            zeros = counts["zeros"]
-            zeros_f = zeros * 100.0 / total
-            good = total - counts["bad"]
-            good_f = good * 100.0 / total
-            good_zeros = zeros - counts["missed_zeros"]
-            good_zeros_f = good_zeros * 100.0 / (good or 1)
-            unders = counts["under"]
-            unders_f = unders * 100.0 / (good or 1)
-            less = unders + counts["less"]
-            less_f = less * 100.0 / (good or 1)
-            line = "%s\t%d" + "\t%d\t%.1f" * 5 + "\n"
-            outsv.write(line % (
-                key, total, zeros, zeros_f, good, good_f, good_zeros,
-                good_zeros_f, unders, unders_f, less, less_f
+            outsv.write(ouline % (
+                (key, total) + normalize_counts(values[key], total)
+            ))
+        if summarize:
+            total_counts = Counter()
+            for counts in values.values():
+                total_counts.update(counts)
+            total = sum(totals.values())
+            outsv.write(ouline % (
+                ("Total:", total) + normalize_counts(total_counts, total)
             ))
 
 
