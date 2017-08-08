@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-"""Make list of non-degenerate variants of given degenerate sites."""
+"""Replace degenerate sites with non-degenerate variants."""
 
 import argparse
 import signal
@@ -33,31 +33,46 @@ def regenerate(dsite):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Make list of non-degenerate variants of given sites."
+        description="""Replace degenerate sites in the TSV with
+        non-degenerate variants."""
     )
     parser.add_argument(
-        "instl", metavar="FILE", type=argparse.FileType("r"),
-        default=sys.stdin, help="""whitespace-separated list of sites,
+        "intsv", metavar="FILE", type=argparse.FileType("r"),
+        default=sys.stdin, help="""input TSV file with degenerate sites,
         use '-' for STDIN"""
     )
     parser.add_argument(
-        "-o", metavar="FILE", dest="oustl", type=argparse.FileType("w"),
-        default=sys.stdout, help="output .stl file, default STDOUT"
+        "-c", "--index", type=int, default=0,
+        help="site column index, default 0"
     )
     parser.add_argument(
-        "-k", "--keep", dest="keep", action="store_true",
-        help="keep degenerate sites in the list, default is replacement"
+        "-t", "--has-title", action="store_true",
+        help="treat the first line as title"
+    )
+    parser.add_argument(
+        "-k", "--keep", action="store_true",
+        help="keep degenerate sites in the file, default is replacement"
+    )
+    parser.add_argument(
+        "-o", metavar="FILE", dest="outsv", type=argparse.FileType("w"),
+        default=sys.stdout, help="output TSV file, default STDOUT"
     )
     args = parser.parse_args(argv)
-    with args.instl as instl:
-        dsites = set(instl.read().strip().split())
-    sites = set()
-    for dsite in dsites:
-        sites.update(regenerate(dsite))
-    if args.keep:
-        sites.update(dsites)
-    with args.oustl as oustl:
-        oustl.write("\n".join(sorted(sites)) + "\n")
+    index = args.index
+    dsites = set()
+    with args.intsv as intsv, args.outsv as outsv:
+        if args.has_title:
+            outsv.write(intsv.readline())
+        for line in intsv:
+            vals = line.strip().split("\t")
+            dsite = vals[index]
+            if args.keep:
+                outsv.write("\t".join(vals) + "\n")
+            for site in regenerate(dsite):
+                if site == dsite and args.keep:
+                    continue
+                vals[index] = site
+                outsv.write("\t".join(vals) + "\n")
 
 
 if __name__ == "__main__":
