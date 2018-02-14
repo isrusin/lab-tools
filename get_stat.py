@@ -389,14 +389,14 @@ def main(argv=None):
         help="zero value cutoff (less or equal), default 0.0"
     )
     cutoff_group.add_argument(
-        "--under-cutoff", metavar="F", type=float, default=0.78,
+        "--under-cutoff", metavar="F", type=float, default=0.8,
         help="""under-representation cutoff (less or equal),
-        default 0.78"""
+        default 0.8"""
     )
     cutoff_group.add_argument(
-        "--over-cutoff", metavar="F", type=float, default=1.23,
+        "--over-cutoff", metavar="F", type=float, default=1.2,
         help="""over-representation cutoff (greater or equal),
-        default 1.23"""
+        default 1.2"""
     )
     index_group = parser.add_argument_group(
         "column index arguments", description="""All column
@@ -425,14 +425,14 @@ def main(argv=None):
     )
     struct_group = parser.add_argument_group("output structure arguments")
     struct_group.add_argument(
-        "--cb-stat", choices=["ss", "ds", "both", "none"], default="both",
+        "--cb-stat", choices=["ss", "ds", "both", "none"], default="ss",
         help="""which compositional bias statistics to provide:
-        ss (single-stranded), ds (double-stranded), or both (default)"""
+        ss (single-stranded, default), ds (double-stranded), or both"""
     )
     struct_group.add_argument(
         "--jg-stat", choices=["counts", "percents", "both", "none"],
-        default="both", help="""which joint-group statistics to provide:
-        counts, percents, both (default, counts in case of raw output)"""
+        default="none", help="""which joint-group statistics to provide:
+        counts, percents, both (counts in case of raw output)"""
     )
     struct_group.add_argument(
         "--cols", "--columns", dest="cbcols", metavar="ABBRS",
@@ -490,3 +490,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
+
