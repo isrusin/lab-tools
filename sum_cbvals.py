@@ -99,7 +99,7 @@ def main(argv=None):
         for (gid, site), (obs, exp, total) in sorted(cbvals.items()):
             ratio = obs / exp
             outsv.write("%s\t%s\t%d\t%.2f\t%.3f\t%d\n" % (
-                gid, site, obs, exp, total
+                gid, site, obs, exp, ratio, total
             ))
 
 
