@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-"""Get site ranks for selected pairs in control dataset."""
+"""Sum CB values for groups of sequences."""
 
 import argparse
 from collections import Counter
@@ -9,13 +9,12 @@ import sys
 
 
 class LineParser(object):
-    def __init__(self, indices, exp_cutoff):
+    def __init__(self, indices):
         id_index, site_index, obs_index, exp_index = indices
         self.id_index = id_index
         self.site_index = site_index
         self.obs_index = obs_index
         self.exp_index = exp_index
-        self.exp_cutoff = exp_cutoff
 
     def __call__(self, line):
         vals = line.strip().split("\t")
@@ -23,32 +22,29 @@ class LineParser(object):
         site = vals[self.site_index]
         obs = float(vals[self.obs_index])
         exp = float(vals[self.exp_index])
-        if math.isnan(exp) or math.isinf(exp) or exp <= self.exp_cutoff:
-            return sid, site, None
-        else:
-            return sid, site, obs / exp
+        total = int(vals[-1])
+        if math.isnan(exp) or math.isinf(exp):
+            exp = 0
+        return sid, site, obs, exp, total
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Get site ranks for selected pairs in control dataset"
+        description="Sum CB values for groups of sequences."
     )
     parser.add_argument(
         "intsv", metavar="TSV", type=argparse.FileType("r"),
-        help="input control dataset"
+        help="input table of CB values"
     )
     parser.add_argument(
-        "-p", "--pairs", metavar="LIST", type=argparse.FileType("r"),
-        help="input list of pairs to calculate ranks for"
+        "-g", "--groups", metavar="DICT", type=argparse.FileType("r"),
+        default=sys.stdin, help="""input dict of 'group ID': 'sequence
+        IDs', default is STDIN"""
     )
     parser.add_argument(
         "-o", "--out", dest="outsv", metavar="FILE",
         type=argparse.FileType("w"), default=sys.stdout,
         help="output file, default is STDOUT"
-    )
-    parser.add_argument(
-        "--exp-cutoff", metavar="F", type=float, default=15.0,
-        help="expected number cutoff, default 15.0"
     )
     index_group_desc = (
         "All column indices are counted from 0 and could be negative\n"
@@ -76,49 +72,34 @@ def main(argv=None):
     args = parser.parse_args(argv)
     indices = (args.id_index, args.site_index,
                args.obs_index, args.exp_index)
-    line_parser = LineParser(indices, args.exp_cutoff)
-    pairs = set()
-    if args.pairs:
-        with args.pairs as inprs:
-            for line in inprs:
-                if line.startswith("#"):
-                    continue
-                pairs.add(tuple(line.strip().split("\t")))
-    selected = dict()
-    ratios = dict()
+    line_parser = LineParser(indices)
+    sid_to_gid = dict()
+    with args.groups as indct:
+        for line in indct:
+            if line.startswith("#"):
+                continue
+            group_id, sid_list = line.strip().split("\t")
+            for sid in id_list.split(","):
+                sid_to_gid[sid] = group_id
+    cbvals = dict()
     with args.intsv as intsv:
-        _title = intsv.readline()
         for line in intsv:
             if line.startswith("#"):
                 continue
-            sid, site, ratio = line_parser(line)
-            if ratio is None:
-                continue
-            ratios.setdefault(site, []).append(ratio)
-            if (sid, site) in pairs:
-                selected.setdefault(site, []).append(ratio)
+            sid, site, obs, exp, total = line_parser(line)
+            gid = sid_to_gid[sid]
+            pair = (sid, site)
+            obs_, exp_, total_ = cbvals.get(pair, (0, 0, 0))
+            cbvals[pair] = (obs+obs_, exp+exp_, total+total_)
+
     with args.outsv as outsv:
-        outsv.write("#:Site\tTotal\tRanks\tNormalized ranks, %\n")
-        for site in sorted(selected.keys()):
-            ranks = dict()
-            counter = Counter(ratios[site])
-            rank = 0
-            for ratio, count in sorted(counter.items()):
-                ranks[ratio] = rank + (count + 1.0) / 2
-                rank += count
-            selected_ranks = []
-            for ratio in selected[site]:
-                selected_ranks.append(ranks[ratio])
-            selected_ranks.sort()
-            normed_ranks = [
-                (item - 0.5) * 100.0 / rank for item in selected_ranks
-            ]
-            outsv.write("%s\t%d\t%s\t%s\n" % (
-                site, rank,
-                ",".join((
-                    "%d" if item.is_integer() else "%.1f"
-                ) % item for item in selected_ranks),
-                ",".join("%.1f" % item for item in normed_ranks)
+        outsv.write(
+            "#:Sequence ID\tSite\tObserved\tExpected\tRatio\tTotal\n"
+        )
+        for (gid, site), (obs, exp, total) in sorted(cbvals):
+            ratio = obs / exp
+            outsv.write("%s\t%s\t%d\t%.2f\t%.3f\t%d\n" % (
+                gid, site, obs, exp, total
             ))
 
 
