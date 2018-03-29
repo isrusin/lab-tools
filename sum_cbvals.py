@@ -96,7 +96,7 @@ def main(argv=None):
         outsv.write(
             "#:Sequence ID\tSite\tObserved\tExpected\tRatio\tTotal\n"
         )
-        for (gid, site), (obs, exp, total) in sorted(cbvals):
+        for (gid, site), (obs, exp, total) in sorted(cbvals.items()):
             ratio = obs / exp
             outsv.write("%s\t%s\t%d\t%.2f\t%.3f\t%d\n" % (
                 gid, site, obs, exp, total
