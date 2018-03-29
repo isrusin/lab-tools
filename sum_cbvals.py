@@ -79,7 +79,7 @@ def main(argv=None):
             if line.startswith("#"):
                 continue
             group_id, sid_list = line.strip().split("\t")
-            for sid in id_list.split(","):
+            for sid in sid_list.split(","):
                 sid_to_gid[sid] = group_id
     cbvals = dict()
     with args.intsv as intsv:
