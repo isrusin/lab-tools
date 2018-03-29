@@ -88,7 +88,7 @@ def main(argv=None):
                 continue
             sid, site, obs, exp, total = line_parser(line)
             gid = sid_to_gid[sid]
-            pair = (sid, site)
+            pair = (gid, site)
             obs_, exp_, total_ = cbvals.get(pair, (0, 0, 0))
             cbvals[pair] = (obs+obs_, exp+exp_, total+total_)
 
