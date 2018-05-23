@@ -77,7 +77,7 @@ def main(argv=None):
         if args.title:
             outsv.write(intsv.readline())
         for line in intsv:
-            row = line.strip().split("\t", split_num)
+            row = line.strip("\n").split("\t", split_num)
             if check(row) != reverse:
                 outsv.write(line)
 
