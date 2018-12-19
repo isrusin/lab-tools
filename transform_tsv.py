@@ -166,7 +166,7 @@ def main(argv=None):
                 oudata.append((key, item))
     if compressed:
         oudata = sorted(
-            (key, delimiter.join(val)) for key, val in compressed.items()
+            (k, delimiter.join(sorted(v))) for k, v in compressed.items()
         )
     if title:
         oudata.insert(0, line_parser(title))
