@@ -134,7 +134,7 @@ def main(argv=None):
                 if line.startswith("##"):
                     metadata.append(line)
                 elif line.startswith("#:") and title is None:
-                    title = line.rstrip("\n")
+                    title = line[2:].rstrip("\n")
             else:
                 data.append(line.rstrip("\n"))
     sample_line = data[0] if data else title
@@ -172,6 +172,8 @@ def main(argv=None):
         oudata.insert(0, line_parser(title))
     with args.outsv as outsv:
         outsv.writelines(metadata)
+        if title:
+            outsv.write("#:")
         for vals, target_val in oudata:
             vals = list(vals)
             vals.insert(target_place, (target_val, ))
