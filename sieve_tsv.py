@@ -30,10 +30,6 @@ def main(argv=None):
         "-r", "--reverse", action="store_true", help="reverse the filter"
     )
     parser.add_argument(
-        "-n", "--no-title", dest="title", action="store_false",
-        help="do not treat the first line as title"
-    )
-    parser.add_argument(
         "-c", "--column", metavar="N", type=int, default=0,
         help="index of the column to filter by, default 0"
     )
@@ -74,9 +70,14 @@ def main(argv=None):
         check = lambda row: row[index] == value
     reverse = args.reverse
     with args.intsv as intsv, args.outsv as outsv:
-        if args.title:
-            outsv.write(intsv.readline())
+        _wait_title = True
         for line in intsv:
+            if line.startswith("#"):
+                if line.startswith("#:") and _wait_title:
+                    outsv.write(line)
+                    _wait_title = False
+                continue
+            _wait_title = False
             row = line.strip("\n").split("\t", split_num)
             if check(row) != reverse:
                 outsv.write(line)
