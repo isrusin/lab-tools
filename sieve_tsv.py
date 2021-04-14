@@ -43,6 +43,26 @@ def main(argv=None):
         type=argparse.FileType("r"), default=sys.stdin,
         help="input file with a list of values"
     )
+    set_group.add_argument(
+        "--lt", dest="cutoff", metavar="FLOAT",
+        type=lambda val: (float.__lt__, float(val)),
+        help="keep lines with a value lower than the cutoff"
+    )
+    set_group.add_argument(
+        "--gt", dest="cutoff", metavar="FLOAT",
+        type=lambda val: (float.__gt__, float(val)),
+        help="keep lines with a value greater than the cutoff"
+    )
+    set_group.add_argument(
+        "--le", dest="cutoff", metavar="FLOAT",
+        type=lambda val: (float.__le__, float(val)),
+        help="keep lines with a value lower than or equal to the cutoff"
+    )
+    set_group.add_argument(
+        "--ge", dest="cutoff", metavar="FLOAT",
+        type=lambda val: (float.__ge__, float(val)),
+        help="keep lines with a value greater than or equal to the cutoff"
+    )
     parser.add_argument(
         "-d", "--delimiter", metavar="STR",
         help="delimiter for the list of values, default is a whitespace"
@@ -51,24 +71,28 @@ def main(argv=None):
         "-h", "-H", "-?", "--help", action="help", help=argparse.SUPPRESS
     )
     args = parser.parse_args(argv)
-    values = set(args.value or [])
-    if not values:
-        if args.inlist.name == "<stdin>":
-            if args.intsv.name == "<stdin>":
-                sys.stderr.write(
-                    "Error! Both the TSV and the LIST are STDIN!\n"
-                )
-                parser.print_usage(sys.stderr)
-                return 1
-        with args.inlist as inlist:
-            values = set(inlist.read().strip().split(args.delimiter))
     index = args.column
     split_num = index + 1
-    check = lambda row: row[index] in values
-    if len(values) == 1:
-        value = values.pop()
-        check = lambda row: row[index] == value
+    values = set(args.value or [])
     reverse = args.reverse
+    if args.cutoff is not None:
+        cutoff_method, cutoff = args.cutoff
+        check = lambda row: cutoff_method(float(row[index]), cutoff)
+    else:
+        if not values:
+            if args.inlist.name == "<stdin>":
+                if args.intsv.name == "<stdin>":
+                    sys.stderr.write(
+                        "Error! Both the TSV and the LIST are STDIN!\n"
+                    )
+                    parser.print_usage(sys.stderr)
+                    return 1
+            with args.inlist as inlist:
+                values = set(inlist.read().strip().split(args.delimiter))
+        check = lambda row: row[index] in values
+        if len(values) == 1:
+            value = values.pop()
+            check = lambda row: row[index] == value
     with args.intsv as intsv, args.outsv as outsv:
         _wait_title = True
         for line in intsv:
