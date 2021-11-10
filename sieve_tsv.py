@@ -11,6 +11,11 @@ import signal
 import sys
 
 
+def float_perc(float_str):
+    if float_str.endswith("%"):
+        return float(float_str[:-1]) * 0.01
+    return float(float_str)
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Sieve a TSV file.", add_help=False,
@@ -46,22 +51,22 @@ def main(argv=None):
     )
     set_group.add_argument(
         "--lt", dest="cutoff", metavar="FLOAT",
-        type=lambda val: (float.__lt__, float(val)),
+        type=lambda val: (float.__lt__, float_perc(val)),
         help="keep lines with a value lower than the cutoff"
     )
     set_group.add_argument(
         "--gt", dest="cutoff", metavar="FLOAT",
-        type=lambda val: (float.__gt__, float(val)),
+        type=lambda val: (float.__gt__, float_perc(val)),
         help="keep lines with a value greater than the cutoff"
     )
     set_group.add_argument(
         "--le", dest="cutoff", metavar="FLOAT",
-        type=lambda val: (float.__le__, float(val)),
+        type=lambda val: (float.__le__, float_perc(val)),
         help="keep lines with a value lower than or equal to the cutoff"
     )
     set_group.add_argument(
         "--ge", dest="cutoff", metavar="FLOAT",
-        type=lambda val: (float.__ge__, float(val)),
+        type=lambda val: (float.__ge__, float_perc(val)),
         help="keep lines with a value greater than or equal to the cutoff"
     )
     parser.add_argument(
@@ -78,7 +83,7 @@ def main(argv=None):
     reverse = args.reverse
     if args.cutoff is not None:
         cutoff_method, cutoff = args.cutoff
-        check = lambda row: cutoff_method(float(row[index]), cutoff)
+        check = lambda row: cutoff_method(float_perc(row[index]), cutoff)
     else:
         if not values:
             if args.inlist.name == "<stdin>":
