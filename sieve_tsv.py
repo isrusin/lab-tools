@@ -14,8 +14,9 @@ import sys
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Sieve a TSV file.", add_help=False,
-        epilog="""If neither -v nor -l is specified, STDIN will be used
-        as the LIST. The TSV should be passed by name in the case."""
+        epilog="""If neither of -v, -l, --lt, --gt, --le, --ge is specified,
+        STDIN will be used as the LIST. The TSV should be passed by name
+        in the case."""
     )
     parser.add_argument(
         "intsv", metavar="TSV", type=argparse.FileType("r"), nargs="?",
