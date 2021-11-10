@@ -16,6 +16,11 @@ def float_perc(float_str):
         return float(float_str[:-1]) * 0.01
     return float(float_str)
 
+
+def field_type(field_str):
+    return int(field_str) - 1
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Sieve a TSV file.", add_help=False,
@@ -35,9 +40,14 @@ def main(argv=None):
     parser.add_argument(
         "-r", "--reverse", action="store_true", help="reverse the filter"
     )
-    parser.add_argument(
+    index_group = parser.add_mutually_exclusive_group(required=False)
+    index_group.add_argument(
         "-c", "--column", metavar="N", type=int, default=0,
         help="index of the column to filter by, default 0"
+    )
+    index_group.add_argument(
+        "-f", "--field", metavar="N", type=field_type, dest="column",
+        help="number (starts with 1) of the column to filter by, default 1"
     )
     set_group = parser.add_mutually_exclusive_group(required=False)
     set_group.add_argument(
