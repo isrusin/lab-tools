@@ -18,6 +18,7 @@ class SymmetricDifference(object):
 def read_acvs(inlist, verbose):
     with inlist:
         idset = set(inlist.read().strip().split("\n"))
+        idset.discard("")
         if verbose:
             sys.stderr.write("%s: %d\n" % (inlist.name, len(idset)))
         return idset
