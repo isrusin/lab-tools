@@ -42,17 +42,17 @@ def main(argv=None):
     )
     index_group = parser.add_mutually_exclusive_group(required=False)
     index_group.add_argument(
-        "-c", "--column", metavar="N", type=int, default=0,
+        "-c", "--column", metavar="{0,1..}", type=int, default=0,
         help="index of the column to filter by, default 0"
     )
     index_group.add_argument(
-        "-f", "--field", metavar="N", type=field_type, dest="column",
+        "-f", "--field", metavar="{1,2..}", type=field_type, dest="column",
         help="number (starts with 1) of the column to filter by, default 1"
     )
     set_group = parser.add_mutually_exclusive_group(required=False)
     set_group.add_argument(
         "-v", "--value", metavar="STR", action="append",
-        help="a list of values to filter with"
+        help="a value to filter with, can be specified multiple times"
     )
     set_group.add_argument(
         "-l", "--list", dest="inlist", metavar="LIST",
@@ -60,24 +60,24 @@ def main(argv=None):
         help="input file with a list of values"
     )
     set_group.add_argument(
-        "--lt", dest="cutoff", metavar="FLOAT",
+        "--lt", dest="cutoff", metavar="NUM",
         type=lambda val: (float.__lt__, float_perc(val)),
-        help="keep lines with a value lower than the cutoff"
+        help="keep lines with a value lower than NUM"
     )
     set_group.add_argument(
-        "--gt", dest="cutoff", metavar="FLOAT",
+        "--gt", dest="cutoff", metavar="NUM",
         type=lambda val: (float.__gt__, float_perc(val)),
-        help="keep lines with a value greater than the cutoff"
+        help="keep lines with a value greater than NUM"
     )
     set_group.add_argument(
-        "--le", dest="cutoff", metavar="FLOAT",
+        "--le", dest="cutoff", metavar="NUM",
         type=lambda val: (float.__le__, float_perc(val)),
-        help="keep lines with a value lower than or equal to the cutoff"
+        help="keep lines with a value lower than or equal to NUM"
     )
     set_group.add_argument(
-        "--ge", dest="cutoff", metavar="FLOAT",
+        "--ge", dest="cutoff", metavar="NUM",
         type=lambda val: (float.__ge__, float_perc(val)),
-        help="keep lines with a value greater than or equal to the cutoff"
+        help="keep lines with a value greater than or equal to NUM"
     )
     parser.add_argument(
         "-d", "--delimiter", metavar="STR",
