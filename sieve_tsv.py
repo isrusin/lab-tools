@@ -88,6 +88,12 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     index = args.column
+    if index < 0:
+        sys.stderr.write(
+            "Error! Column number should be positive!\n"
+        )
+        parser.print_usage(sys.stderr)
+        return 1
     split_num = index + 1
     values = set(args.value or [])
     reverse = args.reverse
