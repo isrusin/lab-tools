@@ -15,13 +15,22 @@ class SymmetricDifference(object):
         fset.difference_update(self.toremove)
 
 
-def read_acvs(inlist, verbose):
+def read_acvs(inlist, verbose, return_header=False):
+    idset = set()
+    header = None
     with inlist:
-        idset = set(inlist.read().strip().split("\n"))
-        idset.discard("")
-        if verbose:
-            sys.stderr.write("%s: %d\n" % (inlist.name, len(idset)))
-        return idset
+        for line in inlist:
+            if line.startswith("#"):
+                if return_header and header is None and line.startswith("#:"):
+                    header = line[2:].strip("\n")
+                continue
+            idset.add(line.strip("\n"))
+    idset.discard("")
+    if verbose:
+        sys.stderr.write("%s: %d\n" % (inlist.name, len(idset)))
+    if return_header:
+        return idset, header
+    return idset
 
 
 def _verbose_sigpipe_handler(signum, frame):
@@ -73,12 +82,14 @@ def main(argv=None):
     stderr = sys.stderr
     if verbose:
         signal.signal(signal.SIGPIPE, _verbose_sigpipe_handler)
-    current_set = read_acvs(args.sets.pop(0), verbose)
+    current_set, header = read_acvs(args.sets.pop(0), verbose, True)
     for next_set in args.sets:
         action(current_set, read_acvs(next_set, verbose))
     with args.oulist as oulist:
         if verbose:
             stderr.write("%s: %d\n" % (oulist.name, len(current_set)))
+        if header is not None:
+            oulist.write("#:%s\n" % header)
         oulist.write("\n".join(sorted(current_set) + [""]))
 
 
