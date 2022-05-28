@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 """Draw histograms obtained by make_rank_hist on a single plot."""
 

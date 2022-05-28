@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 """Draw histograms obtained by make_histogram on a single plot."""
 

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 """Replace degenerate sites with non-degenerate variants."""
 

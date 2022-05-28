@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 """Make 2D-histrogram of compositional bias values."""
 

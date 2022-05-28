@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 """Add or update AC versions in a TSV (or LIST) file."""
 

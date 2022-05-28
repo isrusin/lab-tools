@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 
 """Draw 2D-histogram of compositional bias obtained with make_hist2d."""
 
