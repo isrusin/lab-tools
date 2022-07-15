@@ -63,7 +63,7 @@ def main(argv=None):
     idict = dict()
     with args.indct as indct:
         for line in indct:
-            old, new = line.strip().split("\t", 1)
+            old, new = line.strip("\n").split("\t", 1)
             idict[old] = new
     index = args.index
     keep_order = args.keep_order
